@@ -31,9 +31,8 @@ PERSON_SUBTEAM = {
     "FMD":"PC Products","Wud":"PC Products","Kih":"PC Products","HeT":"PC Products",
     "Kip":"PCT Leitung",
 }
-# Nur tatsächliche Führungskräfte (laut Organigramm, blau markiert)
-# Kis und Krö sind Product Owner, keine Führungskräfte → nicht im FK-Filter
-FK_LIST = ["Jco","MiG","Ktz","Beb","TOK","Urk","Kip"]
+# Nur tatsächliche Führungskräfte (laut Organigramm, blau markiert), alphabetisch
+FK_LIST = ["Beb","Jco","Kip","Ktz","MiG","TOK","Urk"]
 
 ABT_FARBEN = {
     "PC":"#2563eb","PCO":"#f59e0b","PCT":"#16a34a",
@@ -430,25 +429,16 @@ def build_findings_html():
         <div class="finding-header" onclick="toggleFinding('{fid}')">
           <span class="finding-emoji">{emoji}</span>
           <span class="finding-title">{heading}</span>
-          <span class="finding-status offen" id="status-{fid}" onclick="cycleStatus(event,'{fid}')">Offen</span>
           <span class="finding-arrow" id="arrow-{fid}">▸</span>
         </div>
         <div class="finding-body" id="body-{fid}">
           <p>{desc}</p>
-          <div class="finding-note">
-            <label>Notiz / Ergebnis:</label>
-            <textarea id="note-{fid}" placeholder="Hier Ergebnis oder Maßnahme eintragen …" rows="2"></textarea>
-          </div>
         </div>
       </div>"""
         html += "</div>"
 
-    export_btn = """<div class="findings-export">
-      <button class="export-btn" onclick="exportFindings()">📋 Notizen exportieren</button>
-      <span class="save-indicator" id="save-indicator">✓ Gespeichert</span>
-    </div>"""
-    summary = f"<div class='findings-summary'>Gesamt: <b>{len(findings)} Auffälligkeiten</b> in {len(kat_meta)} Kategorien · Klicke zum Aufklappen · Status-Badge anklicken zum Weiterschalten · Notizen werden lokal im Browser gespeichert</div>"
-    return export_btn + summary + html
+    summary = f"<div class='findings-summary'>Gesamt: <b>{len(findings)} Auffälligkeiten</b> in {len(kat_meta)} Kategorien · Klicke auf eine Karte zum Aufklappen</div>"
+    return summary + html
 
 # ── Alle Charts rendern ──────────────────────────────────────────────────────
 print("🔨 Erzeuge Charts…")
@@ -573,11 +563,6 @@ body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;
 .finding-arrow{{color:#9ca3af;font-size:.8rem;transition:transform .2s;flex-shrink:0}}
 .finding-body{{display:none;padding:12px 16px 14px 42px;border-top:1px solid rgba(0,0,0,.06)}}
 .finding-body p{{font-size:.85rem;color:#374151;line-height:1.6}}
-.finding-note{{margin-top:10px}}
-.finding-note label{{font-size:.78rem;font-weight:600;color:#6b7280;display:block;margin-bottom:4px}}
-.finding-note textarea{{width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;
-  font-family:inherit;font-size:.82rem;resize:vertical;outline:none;background:#fff}}
-.finding-note textarea:focus{{border-color:#2563eb}}
 
 /* Overlap-Legende */
 .overlap-legend{{display:flex;flex-direction:column;gap:8px;margin-top:12px;
@@ -586,13 +571,6 @@ body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;
 .ol-item{{display:flex;align-items:flex-start;gap:10px}}
 .ol-dot{{width:14px;height:14px;border-radius:3px;flex-shrink:0;margin-top:2px}}
 
-/* Findings Export */
-.findings-export{{text-align:right;margin-bottom:8px}}
-.export-btn{{background:#1e293b;color:white;border:none;border-radius:6px;
-  padding:7px 14px;font-family:inherit;font-size:.8rem;cursor:pointer;
-  display:inline-flex;align-items:center;gap:6px}}
-.export-btn:hover{{background:#334155}}
-.save-indicator{{font-size:.72rem;color:#16a34a;margin-left:8px;opacity:0;transition:opacity .5s}}
 
 /* Footer */
 .footer{{text-align:center;padding:24px;font-size:.74rem;color:#94a3b8;border-top:1px solid #f1f5f9}}
@@ -637,7 +615,7 @@ body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;
   <div class="chart-card">{div_overlap}</div>
   <div class="overlap-legend">
     <span class="ol-item"><span class="ol-dot" style="background:#dc2626"></span><b>Hohe Überschneidung (rot)</b> → ähnliche Teilnehmergruppe → mögliche Redundanz. Frage: Brauchen wir beide Meetings?</span>
-    <span class="ol-item"><span class="ol-dot" style="background:#16a34a"></span><b>Keine Überschneidung (grün)</b> → völlig verschiedene Teilnehmer → kein direkter Informationsaustausch via Meeting. Hinweis: Lücke hier ist <em>kein Befund</em> – zwei Meetings müssen nicht dieselben Personen haben. Fehlende Meetings erkennst du besser im Netzwerk (isolierte Knoten) oder im Findings-Tab (dokumentierte Lücken).</span>
+    <span class="ol-item"><span class="ol-dot" style="background:#16a34a"></span><b>Keine Überschneidung (grün)</b> → völlig verschiedene Teilnehmer → kein direkter Informationsaustausch via Meeting. Hinweis: Lücke hier ist <em>kein Befund</em> – zwei Meetings müssen nicht dieselben Personen haben. Fehlende Meetings erkennst du besser im Netzwerk (isolierte Knoten) oder im Tab <b>💡 Auffälligkeiten</b> (dokumentierte Lücken).</span>
   </div>
 </div>
 <div id="panel-3" class="panel">
@@ -692,8 +670,6 @@ function updateTableCount() {{
 }}
 
 // ── Findings-Interaktion ──────────────────────────────────────────────────
-var LS_PREFIX = "leitmet_finding_";
-
 function toggleFinding(id) {{
   var body  = document.getElementById("body-"+id);
   var arrow = document.getElementById("arrow-"+id);
@@ -702,80 +678,6 @@ function toggleFinding(id) {{
   arrow.style.transform = open ? "" : "rotate(90deg)";
   arrow.textContent     = open ? "▸" : "▾";
 }}
-
-function cycleStatus(e, id) {{
-  e.stopPropagation();
-  var el = document.getElementById("status-"+id);
-  var states = [{{cls:"offen",lbl:"Offen"}},{{cls:"klaerung",lbl:"In Klärung"}},{{cls:"geklaert",lbl:"Geklärt"}}];
-  var cur = states.findIndex(s=>el.classList.contains(s.cls));
-  var next = states[(cur+1)%3];
-  states.forEach(s=>el.classList.remove(s.cls));
-  el.classList.add(next.cls);
-  el.textContent = next.lbl;
-  saveState(id);
-}}
-
-function saveNote(id) {{
-  var note   = (document.getElementById("note-"+id)||{{}}).value||"";
-  var status = document.getElementById("status-"+id).textContent;
-  localStorage.setItem(LS_PREFIX+id, JSON.stringify({{status:status,note:note}}));
-  var ind = document.getElementById("save-indicator");
-  if(ind){{ ind.style.opacity=1; setTimeout(()=>ind.style.opacity=0, 1800); }}
-}}
-
-function saveState(id) {{ saveNote(id); }}
-
-function restoreAll() {{
-  for(var i=0; i<localStorage.length; i++) {{
-    var key = localStorage.key(i);
-    if(!key.startsWith(LS_PREFIX)) continue;
-    var id = key.slice(LS_PREFIX.length);
-    try {{
-      var data = JSON.parse(localStorage.getItem(key));
-      var statusEl = document.getElementById("status-"+id);
-      var noteEl   = document.getElementById("note-"+id);
-      if(statusEl && data.status) {{
-        var states = [{{cls:"offen",lbl:"Offen"}},{{cls:"klaerung",lbl:"In Klärung"}},{{cls:"geklaert",lbl:"Geklärt"}}];
-        states.forEach(s=>statusEl.classList.remove(s.cls));
-        var match = states.find(s=>s.lbl===data.status);
-        if(match) {{ statusEl.classList.add(match.cls); statusEl.textContent=match.lbl; }}
-      }}
-      if(noteEl && data.note) noteEl.value = data.note;
-    }} catch(e) {{}}
-  }}
-}}
-
-function exportFindings() {{
-  var lines = ["Organisations-Meeting Informationsfluss – Auffälligkeiten & Maßnahmen","Stand: "+new Date().toLocaleDateString("de-DE"),""];
-  document.querySelectorAll(".finding-card").forEach(function(card) {{
-    var id     = card.id.replace("card-","");
-    var titel  = card.querySelector(".finding-title").textContent.trim();
-    var status = card.querySelector(".finding-status").textContent.trim();
-    var note   = (document.getElementById("note-"+id)||{{}}).value||"";
-    lines.push("• " + titel);
-    lines.push("  Status: " + status);
-    if(note) lines.push("  Notiz: " + note);
-    lines.push("");
-  }});
-  var text = lines.join("\\n");
-  navigator.clipboard.writeText(text).then(function(){{
-    alert("Notizen in Zwischenablage kopiert – bereit zum Einfügen in Confluence oder E-Mail.");
-  }}).catch(function(){{
-    var w=window.open("","_blank");
-    w.document.write("<pre style='font-family:monospace;padding:20px'>"+text.replace(/</g,"&lt;")+"</pre>");
-  }});
-}}
-
-// Notizen automatisch speichern (via Event Delegation)
-document.addEventListener("input", function(e) {{
-  if(e.target && e.target.tagName==="TEXTAREA") {{
-    var id = e.target.id.replace("note-","");
-    saveNote(id);
-  }}
-}});
-
-// Beim Laden: gespeicherte Zustände wiederherstellen
-window.addEventListener("DOMContentLoaded", restoreAll);
 </script>
 </body>
 </html>"""
