@@ -392,8 +392,6 @@ def build_findings_html():
          "Einkauf/Operations (PCO) und Sales (PCS) sind im Netzwerk nicht direkt verbunden. Bei kundenseitigen Bedarfen, Lieferzeiten oder Beschaffungsfragen wäre eine direkte Schiene relevant."),
         ("luecke","🕳️","Kein übergreifendes Führungskräfte-Forum auf Teamlead-Ebene",
          "Unterhalb des Leitungsmeetings (GF-Ebene) gibt es kein dokumentiertes Meeting, in dem die Teamleads abteilungsübergreifend koordinieren. Beb, TOK, Urk, Kip treffen sich nur im Leitungsmeeting gemeinsam."),
-        ("klaerung","✅","1:1 MA Gespräche (Kip/PCT) – rotierendes Format",
-         "Geklärt: Je Wochentag trifft Kip einen anderen Mitarbeiter aus PCT (Rotationsplan). Das erklärt die tägliche Eintragung. Die Meeting-Last-Einschätzung für Kip bleibt hoch, aber das Format ist strukturiert und nicht täglich mit allen."),
         ("klaerung","❓","'Regeltermin Turn – PQR' doppelt in der Quelltabelle",
          "Das Meeting erschien in Zeile 4 (mit vollständigen Daten) und Zeile 7 (unvollständig, ohne Teilnehmer und Zweck). Das zweite Vorkommen wurde bereinigt. Handelt es sich um zwei verschiedene Meeting-Instanzen oder ein Duplikat?"),
         ("klaerung","❓","PSG Sitzung – wer sind 'Projektverantwortliche' konkret?",
