@@ -116,7 +116,7 @@ def build_network():
         "HeT": "PCT", "Fef": "PCT",
         "TOK": "PCC", "ADA": "PCC", "JFR": "PCC", "MGR": "PCC",
         "MOS": "PCC", "AWA": "PCC",
-        "Urk": "PCS", "Zrb": "PCS", "Smt": "PCS", "Karim": "PCS",
+        "Urk": "PCS", "Zrb": "PCS", "Smt": "PCS", "KTF": "PCS",
     }
 
     # Kanten-Traces
@@ -379,7 +379,7 @@ def build_sankey():
         "HeT": "PCT", "Fef": "PCT",
         "TOK": "PCC", "ADA": "PCC", "JFR": "PCC", "MGR": "PCC",
         "MOS": "PCC", "AWA": "PCC",
-        "Urk": "PCS", "Zrb": "PCS", "Smt": "PCS", "Karim": "PCS",
+        "Urk": "PCS", "Zrb": "PCS", "Smt": "PCS", "KTF": "PCS",
     }
 
     abt_list = ["PC", "PCO", "PCT", "PCC", "PCS", "Extern"]

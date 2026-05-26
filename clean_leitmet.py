@@ -1,10 +1,22 @@
 """
 clean_leitmet.py
-Bereinigt LeitMet.xlsx und erzeugt leitmet_clean.json
+Bereinigt LeitMet.xlsx (oder CSV-Export aus Confluence) und erzeugt leitmet_clean.json
 
 Aufruf:
     python3 clean_leitmet.py
     python3 clean_leitmet.py --input /anderer/pfad/LeitMet.xlsx
+    python3 clean_leitmet.py --input /anderer/pfad/confluence_export.csv
+    python3 clean_leitmet.py --confluence   # zusätzlich confluence_tabelle.csv erzeugen
+
+Confluence-Import-Workflow:
+    1. Confluence-Seite öffnen → Tabelle markieren → kopieren
+    2. In Numbers/Excel einfügen → als CSV speichern
+    3. python3 clean_leitmet.py --input pfad/zur/export.csv
+    ODER: Confluence-Export-Funktion nutzen (Seite > ··· > Export > CSV)
+
+    Erwartete Spaltenreihenfolge (identisch mit LeitMet.xlsx):
+    Abteilung | Meeting-Name | Zweck | Verantwortlich | Teilnehmer |
+    Rhythmus | Informationsfluss | Status | Learning
 """
 
 import pandas as pd
@@ -14,27 +26,44 @@ import argparse
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Pfade
+# Pfade & Argumente
 # ---------------------------------------------------------------------------
 DEFAULT_INPUT  = Path.home() / "Downloads" / "LeitMet.xlsx"
 DEFAULT_OUTPUT = Path(__file__).parent / "leitmet_clean.json"
+CONFLUENCE_OUT = Path(__file__).parent / "confluence_tabelle.csv"
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--input",  default=str(DEFAULT_INPUT))
-parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
+parser.add_argument("--input",      default=str(DEFAULT_INPUT),
+                    help="Pfad zur xlsx- oder csv-Quelldatei")
+parser.add_argument("--output",     default=str(DEFAULT_OUTPUT))
+parser.add_argument("--confluence", action="store_true",
+                    help="Zusätzlich confluence_tabelle.csv erzeugen")
 args = parser.parse_args()
 
 INPUT  = Path(args.input)
 OUTPUT = Path(args.output)
 
 # ---------------------------------------------------------------------------
-# 1. Rohdaten einlesen
+# 1. Rohdaten einlesen (xlsx ODER csv)
 # ---------------------------------------------------------------------------
-raw = pd.read_excel(INPUT, header=0, dtype=str)
-raw.columns = [
-    "abteilung", "name", "zweck", "verantwortlich",
-    "teilnehmer", "rhythmus", "infofluss", "status", "learning"
-]
+if INPUT.suffix.lower() == ".csv":
+    # CSV-Export aus Confluence (Semikolon oder Komma als Trennzeichen)
+    try:
+        raw = pd.read_csv(INPUT, dtype=str, sep=";", encoding="utf-8-sig")
+        if len(raw.columns) < 5:          # Fallback auf Komma
+            raw = pd.read_csv(INPUT, dtype=str, sep=",", encoding="utf-8-sig")
+    except Exception:
+        raw = pd.read_csv(INPUT, dtype=str, encoding="utf-8-sig")
+    # Spalten umbenennen – flexibel per Position (erste 9 Spalten)
+    expected = ["abteilung", "name", "zweck", "verantwortlich",
+                "teilnehmer", "rhythmus", "infofluss", "status", "learning"]
+    raw.columns = expected[:len(raw.columns)] + list(raw.columns[len(expected):])
+else:
+    raw = pd.read_excel(INPUT, header=0, dtype=str)
+    raw.columns = [
+        "abteilung", "name", "zweck", "verantwortlich",
+        "teilnehmer", "rhythmus", "infofluss", "status", "learning"
+    ]
 
 def clean_val(v):
     """NaN und \xa0 → None; sonst strippen."""
@@ -119,7 +148,9 @@ ALIAS_MAP = {
     "tih": "Tih", "smi": "SMI", "kih": "Kih", "bra": "Bra",
     "wud": "Wud", "het": "HeT", "fef": "Fef", "smt": "Smt",
     "pic": "Pic", "klb": "Klb", "zeller": "Zeller", "mgr": "MGR",
-    "jfr": "JFR", "awa": "AWA", "mos": "MOS", "karim": "Karim",
+    "jfr": "JFR", "awa": "AWA", "mos": "MOS",
+    "karim": "KTF",   # anonymisiert
+    "ktf": "KTF",
 }
 
 PLATZHALTER_BEGRIFFE = {
@@ -139,7 +170,7 @@ PERSON_ABT = {
     "HeT": "PCT", "Fef": "PCT",
     "TOK": "PCC", "ADA": "PCC", "JFR": "PCC", "MGR": "PCC",
     "MOS": "PCC", "AWA": "PCC",
-    "Urk": "PCS", "Zrb": "PCS", "Smt": "PCS", "Karim": "PCS",
+    "Urk": "PCS", "Zrb": "PCS", "Smt": "PCS", "KTF": "PCS",
 }
 
 RHYTHMUS_MAP = [
@@ -284,12 +315,42 @@ for m in meetings:
     })
 
 # ---------------------------------------------------------------------------
-# 5. Ausgabe
+# 5. Ausgabe JSON
 # ---------------------------------------------------------------------------
 with open(OUTPUT, "w", encoding="utf-8") as f:
     json.dump(result, f, ensure_ascii=False, indent=2)
 
 print(f"✅  {len(result)} Meetings bereinigt  →  {OUTPUT}\n")
+
+# ---------------------------------------------------------------------------
+# 6. Optional: Confluence-Tabelle als CSV
+# ---------------------------------------------------------------------------
+if args.confluence:
+    import csv
+    confluence_cols = [
+        ("Abteilung",       lambda m: m["abteilung"]),
+        ("Meeting-Name",    lambda m: m["name"]),
+        ("Kategorie",       lambda m: m["kategorie"]),
+        ("Zweck",           lambda m: (m["zweck"] or "").replace("\n", " ")),
+        ("Verantwortlich",  lambda m: m["verantwortlich"] or ""),
+        ("Teilnehmer",      lambda m: ", ".join(m["teilnehmer"]) or m.get("teilnehmer_raw") or ""),
+        ("Rhythmus",        lambda m: m["rhythmus_klasse"]),
+        ("Wochentage",      lambda m: ", ".join(m["wochentage"])),
+        ("Rhythmus (orig)", lambda m: (m["rhythmus_raw"] or "").replace("\n", " ")),
+        ("Informationsfluss", lambda m: (m["infofluss"] or "").replace("\n", " | ")),
+        ("Status",          lambda m: m["status"]),
+        ("Abt.übergreifend",lambda m: "Ja" if m["abteilungsuebergreifend"] else "Nein"),
+        ("Platzhalter",     lambda m: "Ja" if m["ist_platzhalter"] else ""),
+        ("Learnings",       lambda m: m["learning"] or ""),
+    ]
+    with open(CONFLUENCE_OUT, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f, delimiter=";")
+        writer.writerow([c[0] for c in confluence_cols])
+        for m in result:
+            writer.writerow([fn(m) for _, fn in confluence_cols])
+    print(f"📋  Confluence-Tabelle  →  {CONFLUENCE_OUT}")
+    print(f"    Tipp: In Confluence > Einfügen > Makro > 'CSV' oder direkt in")
+    print(f"    eine Tabelle kopieren (Numbers/Excel öffnen → kopieren → einfügen)")
 
 from collections import Counter
 stats = [
