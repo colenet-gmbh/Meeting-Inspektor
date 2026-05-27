@@ -4,10 +4,9 @@ Bereinigt eine Meeting-Tabelle (xlsx oder CSV-Export aus Confluence)
 und erzeugt meetings_bereinigt.json
 
 Aufruf:
-    python3 daten_bereinigen.py
     python3 daten_bereinigen.py --input /pfad/zur/meetings.xlsx
-    python3 daten_bereinigen.py --input /pfad/zur/confluence_export.csv
-    python3 daten_bereinigen.py --confluence   # zusätzlich confluence_tabelle.csv erzeugen
+    python3 daten_bereinigen.py --input /pfad/zur/export.csv
+    python3 daten_bereinigen.py --input /pfad/zur/export.csv --confluence   # zusätzlich confluence_tabelle.csv erzeugen
 
 Confluence-Import-Workflow:
     1. Confluence-Seite öffnen → Tabelle markieren → kopieren
@@ -25,16 +24,16 @@ import json
 import re
 import argparse
 from pathlib import Path
+from collections import Counter, defaultdict
 
 # ---------------------------------------------------------------------------
 # Pfade & Argumente
 # ---------------------------------------------------------------------------
-DEFAULT_INPUT  = Path.home() / "Downloads" / "LeitMet.xlsx"   # Standardpfad der Eingabedatei
 DEFAULT_OUTPUT = Path(__file__).parent / "meetings_bereinigt.json"
 CONFLUENCE_OUT = Path(__file__).parent / "confluence_tabelle.csv"
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--input",      default=str(DEFAULT_INPUT),
+parser.add_argument("--input",      required=True,
                     help="Pfad zur xlsx- oder csv-Quelldatei")
 parser.add_argument("--output",     default=str(DEFAULT_OUTPUT))
 parser.add_argument("--confluence", action="store_true",
@@ -76,8 +75,7 @@ def clean_val(v):
 # ---------------------------------------------------------------------------
 # 2. Zeilenweise verarbeiten – Split-Rows zusammenführen
 # ---------------------------------------------------------------------------
-# Row 7 = unvollständiges Duplikat von Row 4 (Regeltermin Turn - PQR) → skip
-SKIP_ROWS = {7}
+SKIP_ROWS = set()
 
 meetings = []
 current  = None
@@ -140,18 +138,7 @@ if current is not None:
 # ---------------------------------------------------------------------------
 
 ALIAS_MAP = {
-    "ipa": "Ipa", "jco": "Jco", "mig": "MiG", "tok": "TOK",
-    "kip": "Kip", "urk": "Urk", "beb": "Beb", "fln": "Fln",
-    "ktz": "Ktz", "zes": "Zes", "leb": "LeB", "ada": "ADA",
-    "sez": "Sez", "bre": "Bre", "drs": "DrS", "zrb": "Zrb",
-    "krö": "Krö", "kro": "Krö", "kis": "Kis", "dem": "Dem",
-    "bas": "Bas", "cst": "CST", "dni": "Dni", "fmd": "FMD",
-    "tih": "Tih", "smi": "SMI", "kih": "Kih", "bra": "Bra",
-    "wud": "Wud", "het": "HeT", "fef": "Fef", "smt": "Smt",
-    "pic": "Pic", "klb": "Klb", "zeller": "Zeller", "mgr": "MGR",
-    "jfr": "JFR", "awa": "AWA", "mos": "MOS",
-    "karim": "KTF",   # anonymisiert
-    "ktf": "KTF",
+    # Kürzel-Normalisierung: Kleinschreibung → Anzeigename (z.B. "max": "Max")
 }
 
 PLATZHALTER_BEGRIFFE = {
@@ -162,37 +149,11 @@ PLATZHALTER_BEGRIFFE = {
 }
 
 PERSON_ABT = {
-    # PC / PCP
-    "Jco": "PC",  "MiG": "PC",
-    "Ktz": "PC",  "Lav": "PC",  "Rls": "PC",          # PCP Produktmanagement
-    "Sez": "PC",  "Bre": "PC",  "DrS": "PC",           # GF / übergreifend
-    "Zeller": "PC",
-    # PCO
-    "Beb": "PCO", "Ipa": "PCO", "Fln": "PCO",
-    "Zes": "PCO", "LeB": "PCO",
-    # PCT – AC
-    "Kip": "PCT", "Kis": "PCT", "Rre": "PCT",
-    "Lic": "PCT", "Leo": "PCT", "Gam": "PCT", "Ran": "PCT",
-    # PCT – DC
-    "Krö": "PCT", "Dem": "PCT", "Bas": "PCT", "CST": "PCT",
-    # PCT – PC Products
-    "Dni": "PCT", "Bra": "PCT", "Fef": "PCT", "FMD": "PCT",
-    "Wud": "PCT", "Kih": "PCT", "HeT": "PCT",
-    # PCC
-    "TOK": "PCC", "ADA": "PCC", "JFR": "PCC", "SMI": "PCC",
-    "MGR": "PCC", "MOS": "PCC", "AWA": "PCC",
-    # PCS
-    "Urk": "PCS", "Zrb": "PCS", "Smt": "PCS", "KTF": "PCS",
-    "Arg": "PCS", "Lke": "PCS", "Tih": "PCS", "Laa": "PCS",
+    # Override Person→Abteilung; leer = automatisch aus den Meeting-Abteilungen abgeleitet
 }
 
-# PCT Subteam-Zuordnung (für Hover / Findings)
 PERSON_SUBTEAM = {
-    "Kis": "AC", "Rre": "AC", "Lic": "AC", "Leo": "AC", "Gam": "AC", "Ran": "AC",
-    "Krö": "DC", "Dem": "DC", "Bas": "DC", "CST": "DC",
-    "Dni": "PC Products", "Bra": "PC Products", "Fef": "PC Products",
-    "FMD": "PC Products", "Wud": "PC Products", "Kih": "PC Products", "HeT": "PC Products",
-    "Kip": "Entwicklung (Leitung)",
+    # Optionale Subteam-Zuordnung für Hover-Texte
 }
 
 RHYTHMUS_MAP = [
@@ -295,11 +256,21 @@ def kategorisiere(name):
 # ---------------------------------------------------------------------------
 # 4. Zusammensetzen
 # ---------------------------------------------------------------------------
+if not PERSON_ABT:
+    _votes: dict = defaultdict(Counter)
+    for m in meetings:
+        abt = m.get("abteilung")
+        if not abt:
+            continue
+        for p in parse_teilnehmer(m.get("teilnehmer") or ""):
+            if p:
+                _votes[p][abt] += 1
+    PERSON_ABT = {p: ctr.most_common(1)[0][0] for p, ctr in _votes.items() if ctr}
+
 result = []
 for m in meetings:
-    # Fehlende Abteilung per Vorwärtsfüllung (Fallback PC für übergreifende Meetings)
     if m["abteilung"] is None:
-        m["abteilung"] = "PC"
+        m["abteilung"] = "Unbekannt"
 
     teilnehmer_liste = parse_teilnehmer(m["teilnehmer"])
     rhythmus_klasse  = norm_rhythmus_klasse(m["rhythmus"])
@@ -381,7 +352,6 @@ if args.confluence:
     print(f"    Tipp: In Confluence > Einfügen > Makro > 'CSV' oder direkt in")
     print(f"    eine Tabelle kopieren (Numbers/Excel öffnen → kopieren → einfügen)")
 
-from collections import Counter
 stats = [
     ("Aktiv",                  sum(1 for m in result if m["status"] == "Aktiv")),
     ("Geplant",                sum(1 for m in result if m["status"] == "Geplant")),

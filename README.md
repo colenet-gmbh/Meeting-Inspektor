@@ -1,7 +1,7 @@
 # Organisations-Meeting-Informationsfluss
 
 Interaktives Analyse-Dashboard für Meeting-Strukturen in Organisationen.  
-Liest eine Excel-Tabelle ein, bereinigt und normalisiert die Daten, und erzeugt daraus eine vollständig offline-fähige HTML-Seite.
+Zwei Ansätze: **Python-Pipeline** (xlsx/csv → aufbereitetes HTML) oder **Standalone-HTML** (direkt im Browser, kein Python).
 
 ---
 
@@ -45,24 +45,20 @@ Rohdatei bleibt **lokal** und wird nicht ins Repository eingecheckt (`.gitignore
 
 ---
 
-## Ablauf
+## Modus 1: Python-Pipeline
+
+Für vollständige Datenbereinigung, Normalisierung und ein reich bebildertes HTML-Dashboard.
 
 ### 1. Daten bereinigen
 
 ```bash
-python3 daten_bereinigen.py
-```
-
-Liest standardmäßig `~/Downloads/LeitMet.xlsx`. Anderer Pfad:
-
-```bash
-python3 daten_bereinigen.py --input /pfad/zur/datei.xlsx
+python3 daten_bereinigen.py --input /pfad/zur/meetings.xlsx
 ```
 
 Erzeugt: `meetings_bereinigt.json`
 
 Optionen:
-- `--input`      Pfad zur Quelldatei (`.xlsx` oder `.csv`)
+- `--input`      Pfad zur Quelldatei (`.xlsx` oder `.csv`) — **Pflichtangabe**
 - `--output`     Pfad zur JSON-Ausgabe (Standard: `meetings_bereinigt.json`)
 - `--confluence` Zusätzlich eine CSV für den Confluence-Import erzeugen (`confluence_tabelle.csv`)
 
@@ -84,10 +80,46 @@ Die HTML-Datei ist vollständig offline-fähig (Plotly.js eingebettet, ~5 MB) un
 
 ---
 
-## Confluence-Export
+## Modus 2: Standalone-HTML
+
+Kein Python, kein Server. Die Datei `meeting_strukturanalyse_standalone.html` läuft komplett im Browser.
+
+### Daten laden
+
+**Option A – Confluence-Paste:**
+
+1. Confluence-Seite mit der Meeting-Tabelle öffnen
+2. Alles markieren (`⌘A`) und kopieren (`⌘C`)
+3. HTML öffnen → „Aus Confluence einfügen" → `⌘V`
+
+Der Header wird automatisch erkannt (überspringt Seitenname und Navigation).
+
+**Option B – CSV-Upload:**
+
+CSV, TSV oder TXT mit den [erwarteten Spalten](#eingabedatei) hochladen.  
+Trennzeichen (Komma, Semikolon, Tab) wird automatisch erkannt. UTF-8-BOM (Excel/Numbers) wird unterstützt.
+
+### Konfiguration
+
+Oben in der HTML-Datei befindet sich ein optionaler Config-Block. Alle Felder können leer bleiben – Abteilungen und Farben werden dann automatisch aus den Daten abgeleitet.
+
+```javascript
+const ALIAS_MAP   = { /* Kürzel-Normalisierung, z.B. "max": "Max" */ };
+const PERSON_ABT  = { /* Override Person→Abteilung;  leer = auto  */ };
+const FK_LIST     = [ /* Führungskräfte (Stern im Netzwerk)        */ ];
+const ABT_FARBEN  = { /* Override Abteilungsfarben;   leer = auto  */ };
+```
+
+### Neue Daten laden
+
+Über den Button „Neue Daten laden" kann jederzeit eine neue Datei eingelesen werden, ohne die Seite neu zu öffnen.
+
+---
+
+## Confluence-Export (Pipeline)
 
 ```bash
-python3 daten_bereinigen.py --confluence
+python3 daten_bereinigen.py --input /pfad/zur/meetings.xlsx --confluence
 ```
 
 Erzeugt `confluence_tabelle.csv` (Semikolon-getrennt, UTF-8-BOM).  
@@ -113,10 +145,11 @@ In Numbers/Excel öffnen → alles markieren → kopieren → in Confluence-Tabe
 
 | Datei | Beschreibung |
 |-------|-------------|
-| `daten_bereinigen.py` | Datenbereinigung und Normalisierung |
-| `dashboard_erstellen.py` | Chart-Generierung und HTML-Zusammenbau |
-| `meetings_bereinigt.json` | Bereinigte Daten (Zwischenschritt) |
-| `meeting_strukturanalyse.html` | Fertiges Dashboard |
+| `meeting_strukturanalyse_standalone.html` | Standalone-Dashboard (Modus 2) |
+| `daten_bereinigen.py` | Datenbereinigung und Normalisierung (Modus 1) |
+| `dashboard_erstellen.py` | Chart-Generierung und HTML-Zusammenbau (Modus 1) |
+| `meetings_bereinigt.json` | Bereinigte Daten (Zwischenschritt, Modus 1) |
+| `meeting_strukturanalyse.html` | Fertiges Pipeline-Dashboard (Modus 1) |
 | `confluence_tabelle.csv` | Exporttabelle für Confluence |
 
 Quelldaten (`*.xlsx`, `*.csv`) sind in `.gitignore` ausgeschlossen.
@@ -125,15 +158,11 @@ Quelldaten (`*.xlsx`, `*.csv`) sind in `.gitignore` ausgeschlossen.
 
 ## Anpassen
 
-Die Skripte enthalten Konfigurationsblöcke am Anfang, die für ein neues Projekt angepasst werden:
+Alle Config-Dicts können leer bleiben – Abteilungen, Zuordnungen und Farben werden dann automatisch aus den Daten abgeleitet.
 
-**`daten_bereinigen.py`**
-- `ALIAS_MAP` – Namenskürzel-Normalisierung
-- `PERSON_ABT` – Personen-zu-Abteilung-Zuordnung
-- `PERSON_SUBTEAM` – optionale Subteam-Zuordnung
-- `SKIP_ROWS` – Zeilen, die beim Import übersprungen werden
-
-**`dashboard_erstellen.py`**
-- `PERSON_ABT` / `PERSON_SUBTEAM` – wie oben
-- `FK_LIST` – Liste der Führungskräfte (erhalten Stern-Symbol im Netzwerk)
-- `ABT_FARBEN` – Farben pro Abteilung
+**`daten_bereinigen.py`** und **`dashboard_erstellen.py`**
+- `ALIAS_MAP` – Kürzel-Normalisierung (Kleinschreibung → Anzeigename)
+- `PERSON_ABT` – Override Person→Abteilung; leer = auto
+- `PERSON_SUBTEAM` – optionale Subteam-Zuordnung für Hover-Texte
+- `FK_LIST` – Führungskräfte (Stern-Symbol im Netzwerk); leer = keine Hervorhebung
+- `ABT_FARBEN` – Override Abteilungsfarben; leer = automatisch aus Palette

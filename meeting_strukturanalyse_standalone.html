@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meeting Strukturanalyse – Standalone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;font-size:14px}
+
+/* ── Import Screen ──────────────────────────────────────────── */
+#import-screen{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  min-height:100vh;padding:40px 20px;background:#f8fafc}
+.import-card{background:white;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.1);
+  padding:36px 40px;max-width:680px;width:100%}
+.import-logo{font-size:1.7rem;font-weight:700;color:#1e40af;margin-bottom:4px;letter-spacing:-0.5px}
+.import-sub{font-size:.85rem;color:#64748b;margin-bottom:28px}
+.import-section-title{font-size:.8rem;font-weight:600;color:#94a3b8;letter-spacing:.06em;
+  text-transform:uppercase;margin-bottom:10px;margin-top:22px}
+.import-instructions{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;
+  padding:12px 16px;margin-bottom:18px;font-size:.84rem;color:#1e40af;line-height:1.6}
+.import-instructions code{background:#dbeafe;padding:1px 5px;border-radius:3px;font-size:.83em}
+textarea#paste-area{width:100%;min-height:180px;border:2px solid #e2e8f0;border-radius:8px;
+  padding:12px;font-family:"Inter",system-ui,monospace;font-size:.82rem;color:#374151;
+  resize:vertical;outline:none;transition:border .15s}
+textarea#paste-area:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+textarea#paste-area::placeholder{color:#cbd5e1}
+.btn-primary{background:#2563eb;color:white;border:none;border-radius:8px;
+  padding:10px 22px;font-family:inherit;font-size:.88rem;font-weight:600;
+  cursor:pointer;transition:background .15s;margin-top:12px}
+.btn-primary:hover{background:#1d4ed8}
+.import-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#94a3b8;font-size:.8rem}
+.import-divider::before,.import-divider::after{content:"";flex:1;border-top:1px solid #e2e8f0}
+.file-upload-label{display:inline-flex;align-items:center;gap:8px;border:2px dashed #cbd5e1;
+  border-radius:8px;padding:12px 18px;cursor:pointer;font-size:.85rem;color:#64748b;
+  transition:all .15s;width:100%}
+.file-upload-label:hover{border-color:#2563eb;color:#2563eb;background:#eff6ff}
+#file-input{display:none}
+.import-status{margin-top:16px;padding:10px 14px;border-radius:8px;font-size:.85rem;
+  font-weight:500;display:none}
+.import-status.ok{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;display:block}
+.import-status.err{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;display:block}
+
+/* ── Dashboard ───────────────────────────────────────────────── */
+#dashboard{display:none}
+.header{background:linear-gradient(135deg,#1e40af 0%,#2563eb 60%,#0891b2 100%);
+  color:white;padding:22px 36px 20px;display:flex;justify-content:space-between;align-items:center}
+.header-left h1{font-size:1.45rem;font-weight:700;letter-spacing:-0.3px}
+.header-left p{opacity:.8;font-size:.82rem;margin-top:3px}
+.btn-reload{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);
+  color:white;border-radius:7px;padding:7px 14px;font-family:inherit;font-size:.8rem;
+  cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn-reload:hover{background:rgba(255,255,255,.25)}
+.stats{display:flex;gap:12px;padding:16px 36px;flex-wrap:wrap}
+.stat{background:white;border-radius:10px;padding:14px 20px;flex:1;min-width:120px;
+  text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:1px solid #f1f5f9}
+.stat .val{font-size:1.9rem;font-weight:700;color:#2563eb;line-height:1}
+.stat .lbl{font-size:.75rem;color:#64748b;margin-top:3px}
+.warnings{margin:0 36px 12px;background:#fffbeb;border:1px solid #fcd34d;
+  border-left:4px solid #f59e0b;border-radius:6px;padding:10px 14px;font-size:.82rem}
+.warnings ul{padding-left:16px}
+.warnings li{margin-bottom:2px}
+.tab-bar{display:flex;gap:2px;padding:0 36px;background:#f8fafc;
+  border-bottom:2px solid #e2e8f0;position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.tab-btn{padding:10px 16px;border:none;background:none;cursor:pointer;
+  font-family:inherit;font-size:.83rem;font-weight:500;color:#64748b;
+  border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:#2563eb}
+.tab-btn.active{color:#2563eb;border-bottom-color:#2563eb}
+.panel{display:none;padding:20px 36px 30px}
+.panel.active{display:block}
+.chart-card{background:white;border-radius:10px;padding:16px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);border:1px solid #f1f5f9}
+.hint{font-size:.78rem;color:#94a3b8;margin-top:8px;padding-left:4px}
+/* Table */
+.table-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+#table-search{flex:1;max-width:380px;padding:8px 12px;border:1px solid #e2e8f0;
+  border-radius:8px;font-family:inherit;font-size:.85rem;outline:none}
+#table-search:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+.table-meta{font-size:.8rem;color:#94a3b8}
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0}
+#meeting-table{width:100%;border-collapse:collapse;font-size:.82rem}
+#meeting-table thead th{background:#1e293b;color:white;padding:10px 12px;
+  text-align:left;font-weight:600;white-space:nowrap;position:sticky;top:0}
+#meeting-table tbody tr{border-bottom:1px solid #f1f5f9;transition:background .1s}
+#meeting-table tbody tr:hover{background:#f8fafc}
+#meeting-table td{padding:9px 12px;vertical-align:top}
+.abt-badge{display:inline-block;padding:2px 7px;border-radius:4px;
+  font-size:.75rem;font-weight:600;white-space:nowrap}
+.meeting-name{font-weight:500;min-width:160px}
+.platzh-badge{display:inline-block;font-size:.7rem;background:#fef3c7;
+  color:#d97706;border:1px solid #fcd34d;border-radius:3px;padding:1px 5px;margin-left:4px}
+.kat-pill{display:inline-block;background:#f1f5f9;color:#475569;border-radius:4px;
+  padding:2px 7px;font-size:.74rem;white-space:nowrap}
+.rhy-dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+  margin-right:5px;vertical-align:middle}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+.badge-aktiv{background:#dcfce7;color:#15803d}
+.badge-geplant{background:#dbeafe;color:#1d4ed8}
+.teiln-cell,.zweck-cell,.learning-cell{max-width:220px;font-size:.8rem;color:#475569}
+/* Auffälligkeiten placeholder */
+.placeholder-box{background:white;border-radius:10px;padding:36px 32px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);border:1px solid #f1f5f9;max-width:640px;
+  margin:0 auto;text-align:center}
+.placeholder-box .ph-icon{font-size:2.5rem;margin-bottom:16px}
+.placeholder-box h3{font-size:1.05rem;font-weight:600;color:#374151;margin-bottom:10px}
+.placeholder-box p{font-size:.88rem;color:#64748b;line-height:1.7}
+/* Overlap legend */
+.overlap-legend{display:flex;flex-direction:column;gap:8px;margin-top:12px;
+  background:white;border-radius:8px;padding:12px 16px;border:1px solid #f1f5f9;
+  font-size:.83rem;color:#374151}
+.ol-item{display:flex;align-items:flex-start;gap:10px}
+.ol-dot{width:14px;height:14px;border-radius:3px;flex-shrink:0;margin-top:2px}
+.footer{text-align:center;padding:24px;font-size:.74rem;color:#94a3b8;border-top:1px solid #f1f5f9}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ IMPORT SCREEN ═══════════════════════════ -->
+<div id="import-screen">
+  <div class="import-card">
+    <div class="import-logo">Meeting Strukturanalyse</div>
+    <div class="import-sub">Standalone Dashboard · läuft komplett im Browser · kein Python, kein Server</div>
+
+    <div class="import-section-title">Schritt 1: Daten aus Confluence kopieren</div>
+    <div class="import-instructions">
+      Öffne die Meeting-Tabelle in Confluence → <code>⌘A</code> (alles markieren) → <code>⌘C</code> (kopieren) →
+      unten in das Textfeld einfügen (<code>⌘V</code>).<br>
+      Alternativ kannst du auch eine <strong>CSV-Datei</strong> hochladen (gleiche Spaltenstruktur).
+    </div>
+
+    <div class="import-section-title">Schritt 2: Einfügen oder hochladen</div>
+    <textarea id="paste-area" placeholder="Confluence-Tabelle hier einfügen (⌘A in Confluence → ⌘C → hier ⌘V)...&#10;&#10;Erwartet wird eine Tab-getrennte Tabelle mit diesen Spalten:&#10;Abteilung · Meeting-Name · Kategorie · Zweck · Verantwortlich · Teilnehmer · Rhythmus · Informationsfluss · Status · Abt.übergreifend · Platzhalter · Learnings"></textarea>
+    <button class="btn-primary" onclick="loadFromPaste()">Prüfen &amp; Laden</button>
+
+    <div class="import-divider">oder</div>
+
+    <label class="file-upload-label" for="file-input">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      CSV-Datei wählen (.csv, .tsv, .txt)
+      <input type="file" id="file-input" accept=".csv,.tsv,.txt" onchange="loadFromFile(this)">
+    </label>
+
+    <div id="import-status" class="import-status"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ DASHBOARD ═══════════════════════════════ -->
+<div id="dashboard">
+  <div class="header">
+    <div class="header-left">
+      <h1>Organisations-Meeting &amp; Informationsfluss</h1>
+      <p id="header-meta">Interaktives Dashboard</p>
+    </div>
+    <button class="btn-reload" onclick="resetToImport()">↩ Neue Daten laden</button>
+  </div>
+
+  <div class="stats" id="stats-bar"></div>
+  <div id="warnings-bar"></div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="showTab(0)">Netzwerk</button>
+    <button class="tab-btn" onclick="showTab(1)">Kalender</button>
+    <button class="tab-btn" onclick="showTab(2)">Überschneidungen</button>
+    <button class="tab-btn" onclick="showTab(3)">Abteilungen</button>
+    <button class="tab-btn" onclick="showTab(4)">Informationsfluss</button>
+    <button class="tab-btn" onclick="showTab(5)">Alle Meetings</button>
+    <button class="tab-btn" onclick="showTab(6)">Auffälligkeiten</button>
+  </div>
+
+  <div id="panel-0" class="panel active">
+    <div class="chart-card" id="chart-netzwerk"></div>
+    <p class="hint" id="hint-netzwerk">Stern (★) = Führungskraft · Klick auf Knoten = als FK markieren / entfernen · Knotengröße = Meeting-Anzahl · Liniendicke = Frequenz</p>
+  </div>
+  <div id="panel-1" class="panel">
+    <div class="chart-card" id="chart-kalender"></div>
+    <p class="hint">Bubble-Größe = Anzahl Meetings an diesem Tag/Rhythmus · Hover für Meeting-Namen</p>
+  </div>
+  <div id="panel-2" class="panel">
+    <div class="chart-card" id="chart-overlap"></div>
+    <div class="overlap-legend">
+      <span class="ol-item"><span class="ol-dot" style="background:#dc2626"></span><b>Hohe Überschneidung (rot)</b> → ähnliche Teilnehmergruppe → mögliche Redundanz</span>
+      <span class="ol-item"><span class="ol-dot" style="background:#16a34a"></span><b>Keine Überschneidung (grün)</b> → verschiedene Teilnehmer. Fehlende Meetings erkennst du besser im Netzwerk-Tab.</span>
+    </div>
+  </div>
+  <div id="panel-3" class="panel">
+    <div class="chart-card" id="chart-abt"></div>
+    <p class="hint">Gestapelte Balken nach Rhythmus · Hover für Meeting-Namen</p>
+  </div>
+  <div id="panel-4" class="panel">
+    <div class="chart-card" id="chart-sankey"></div>
+    <p class="hint">Flussdicke = gewichtete Meeting-Frequenz zwischen Abteilungen</p>
+  </div>
+  <div id="panel-5" class="panel">
+    <div class="table-toolbar">
+      <input type="text" id="table-search" placeholder="Meeting, Person, Abteilung …" oninput="filterTable()">
+      <div class="table-meta" id="table-count"></div>
+    </div>
+    <div class="table-wrap">
+      <table id="meeting-table">
+        <thead><tr>
+          <th>Abteilung</th><th>Meeting</th><th>Kategorie</th><th>Rhythmus</th>
+          <th>Verantwortl.</th><th>Teilnehmer</th><th>Status</th>
+          <th title="Abteilungsübergreifend">Übergr.</th><th>Zweck</th><th>Learnings</th>
+        </tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <p class="hint">Suche filtert über Meeting-Name, Teilnehmer und Abteilung</p>
+  </div>
+  <div id="panel-6" class="panel">
+    <div class="placeholder-box">
+      <div class="ph-icon">💡</div>
+      <h3>Auffälligkeiten &amp; Muster</h3>
+      <p>Dieser Tab ist für projektspezifische Beobachtungen vorgesehen.<br>
+      Die Charts zeigen <em>was</em> da ist – <em>warum</em> etwas auffällt,<br>
+      entscheidet der Mensch, der die Organisation kennt.</p>
+    </div>
+  </div>
+
+  <div class="footer" id="footer-text">Meeting Strukturanalyse</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// Optionale Konfiguration – leer lassen für automatische Erkennung
+//
+// ALIAS_MAP  : Kürzel-Normalisierung (z.B. "max": "Max"); optional
+// PERSON_ABT : überschreibt die automatische Person→Abteilung-Zuweisung
+// ABT_FARBEN : überschreibt die automatischen Abteilungsfarben
+// FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
+// PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
+// ══════════════════════════════════════════════════════════════════════════════
+const ALIAS_MAP = {
+  // Beispiel: "max": "Max"
+};
+const PERSON_ABT = {
+  // Beispiel: "Max": "Vertrieb"
+};
+const PERSON_SUBTEAM = {
+  // Beispiel: "Max": "Innendienst"
+};
+const FK_LIST = [];
+const ABT_FARBEN = {};
+const RHY_FARBEN = {
+  "täglich":"#dc2626","wöchentlich":"#2563eb","dreiwöchentlich":"#0891b2",
+  "zweiwöchentlich":"#16a34a","monatlich":"#f59e0b","quartalsweise":"#7c3aed","variabel":"#9ca3af"
+};
+const FREQ_W = {
+  "täglich":5,"wöchentlich":4,"dreiwöchentlich":3,
+  "zweiwöchentlich":2,"monatlich":1,"quartalsweise":0.5,"variabel":0.5
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Dynamische Konfiguration – wird nach dem Laden der Daten berechnet
+// ══════════════════════════════════════════════════════════════════════════════
+const PALETTE = [
+  "#2563eb","#f59e0b","#16a34a","#dc2626","#7c3aed",
+  "#0891b2","#db2777","#65a30d","#ea580c","#6366f1"
+];
+
+// Leitet Person→Abteilung aus den Daten ab (häufigste Abteilung pro Person)
+function autoDerivePERSON_ABT(meetings) {
+  const counts = {};
+  meetings.forEach(m => {
+    m.teilnehmer.forEach(p => {
+      if (!counts[p]) counts[p] = {};
+      counts[p][m.abteilung] = (counts[p][m.abteilung] || 0) + 1;
+    });
+  });
+  const result = {};
+  Object.entries(counts).forEach(([p, c]) => {
+    result[p] = Object.entries(c).sort((a,b) => b[1]-a[1])[0][0];
+  });
+  return result;
+}
+
+// Weist Abteilungen Farben zu: bekannte aus ABT_FARBEN, unbekannte aus Palette
+function buildAbtFarben(depts) {
+  const result = {};
+  depts.forEach((d,i) => { result[d] = ABT_FARBEN[d] || PALETTE[i % PALETTE.length]; });
+  return result;
+}
+
+// Laufzeit-Variablen – werden in showDashboard() befüllt
+let effectivePersonAbt = {};
+let effectiveAbtFarben = {};
+let allDepts = [];
+
+// Netzwerk: FK-Set (klickbar im Chart togglebar) + Positions-Cache
+let fkSet    = new Set(FK_LIST);   // wird bei neuem Daten-Load auf FK_LIST zurückgesetzt
+let netCache = null;               // { pos, edges, connectedPersons, isolatedCount }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Rhythmus-Normalisierung
+// ══════════════════════════════════════════════════════════════════════════════
+const RHYTHMUS_MAP = [
+  [/täglich|daily/i,                              "täglich"],
+  [/dreiwöch/i,                                   "dreiwöchentlich"],
+  [/zwei.*wöch|alle\s*2\s*woch|bi.?week/i,        "zweiwöchentlich"],
+  [/wöchentl|weekly|1x.*woch/i,                   "wöchentlich"],
+  [/monatl|monthly|letzt.*monat|dritten.*mi/i,    "monatlich"],
+  [/quartal|quarterly|beirat|ende.*quartal/i,     "quartalsweise"],
+  [/divers|variabel|nach bedarf/i,                "variabel"],
+];
+const TAG_MAP = [
+  [/(?<![a-zA-Z])montag(?![a-zA-Z])|(?<![a-zA-Z])mo\.?(?![a-zA-Z])/i, "Mo"],
+  [/(?<![a-zA-Z])dienstag(?![a-zA-Z])|(?<![a-zA-Z])di\.?(?![a-zA-Z])/i, "Di"],
+  [/(?<![a-zA-Z])mittwoch(?![a-zA-Z])|(?<![a-zA-Z])mi\.?(?![a-zA-Z])/i, "Mi"],
+  [/(?<![a-zA-Z])donnerstag(?![a-zA-Z])|(?<![a-zA-Z])do\.?(?![a-zA-Z])/i, "Do"],
+  [/(?<![a-zA-Z])freitag(?![a-zA-Z])|(?<![a-zA-Z])fr\.?(?![a-zA-Z])/i, "Fr"],
+];
+
+function normalizeRhythmus(text) {
+  if (!text) return "variabel";
+  for (const [re, label] of RHYTHMUS_MAP) {
+    if (re.test(text)) return label;
+  }
+  return "variabel";
+}
+function extractWochentage(text) {
+  if (!text) return [];
+  const days = [];
+  for (const [re, label] of TAG_MAP) {
+    if (re.test(text) && !days.includes(label)) days.push(label);
+  }
+  return days;
+}
+function normalizeAlias(raw) {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  const lower = trimmed.toLowerCase();
+  if (ALIAS_MAP[lower]) return ALIAS_MAP[lower];
+  // capitalize first letter
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CSV / TSV Parsing
+// ══════════════════════════════════════════════════════════════════════════════
+function detectSeparator(text) {
+  // Nicht nur die erste Zeile prüfen – bei Confluence-Paste beginnt der Text
+  // mit Seitenname/Navigation, nicht mit dem Tabellen-Header.
+  // Erste Zeile mit ≥5 Trennzeichen gewinnt.
+  const lines = text.split("\n");
+  for (const line of lines.slice(0, 30)) {
+    if ((line.match(/\t/g) || []).length >= 5) return "\t";
+    if ((line.match(/;/g)  || []).length >= 5) return ";";
+    if ((line.match(/,/g)  || []).length >= 5) return ",";
+  }
+  // Fallback auf erste Zeile
+  const first = lines[0] || "";
+  if (first.includes("\t")) return "\t";
+  if (first.includes(";")) return ";";
+  return ",";
+}
+
+function parseData(text) {
+  // Strip UTF-8 BOM if present (Excel/Numbers CSV exports)
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const sep = detectSeparator(text);
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) throw new Error("Zu wenig Zeilen – mindestens Header + 1 Datensatz erwartet.");
+
+  // Header-Zeile finden – beim ⌘A+⌘C aus Confluence landet der Seitenname
+  // in den ersten Zeilen, bevor die eigentliche Tabelle beginnt.
+  // Wir scannen die ersten 30 Zeilen und nehmen die, die Tabellen-Schlüsselwörter enthält.
+  let headerLineIdx = 0;
+  for (let i = 0; i < Math.min(lines.length, 30); i++) {
+    const l = lines[i].toLowerCase();
+    if (l.includes("abteilung") && (l.includes("meeting") || l.includes("rhythmus") || l.includes("teilnehmer"))) {
+      headerLineIdx = i;
+      break;
+    }
+  }
+  const headerRaw = lines[headerLineIdx].split(sep).map(h => h.trim().toLowerCase());
+
+  // Column index mapping (case-insensitive, flexible)
+  const colMap = {
+    abteilung: findCol(headerRaw, ["abteilung","abt"]),
+    name:      findCol(headerRaw, ["meeting-name","meeting name","meetingname","name","titel"]),
+    kategorie: findCol(headerRaw, ["kategorie","kat"]),
+    zweck:     findCol(headerRaw, ["zweck","ziel","purpose"]),
+    vera:      findCol(headerRaw, ["verantwortlich","verantwortl","owner","responsible"]),
+    teiln:     findCol(headerRaw, ["teilnehmer","participants","personen"]),
+    rhythmus:  findCol(headerRaw, ["rhythmus","frequenz","frequency","cadence","turnus"]),
+    infofluss: findCol(headerRaw, ["informationsfluss","infofluss","information"]),
+    status:    findCol(headerRaw, ["status"]),
+    uebergr:   findCol(headerRaw, ["abt.übergreifend","abt.uebergreifend","übergreifend","uebergreifend","cross"]),
+    platzh:    findCol(headerRaw, ["platzhalter","placeholder"]),
+    learning:  findCol(headerRaw, ["learnings","learning","erkenntnis"]),
+  };
+
+  // Validate required columns
+  const required = ["abteilung","name","teiln","rhythmus","status"];
+  for (const r of required) {
+    if (colMap[r] === -1) throw new Error(`Pflicht-Spalte nicht gefunden: "${r}". Bitte prüfe die Tabellen-Header.`);
+  }
+
+  const meetings = [];
+  for (let i = headerLineIdx + 1; i < lines.length; i++) {
+    const cells = splitLine(lines[i], sep);
+    const get = (key) => (colMap[key] !== -1 && cells[colMap[key]] !== undefined)
+      ? cells[colMap[key]].trim() : "";
+
+    const abteilung = get("abteilung");
+    const name = get("name");
+    if (!abteilung && !name) continue; // skip empty rows
+
+    // Parse Teilnehmer
+    const teilnRaw = get("teiln");
+    const teilnehmer = teilnRaw
+      ? teilnRaw.split(/[,;]/).map(t => normalizeAlias(t.trim())).filter(Boolean)
+      : [];
+
+    const rhythmusRaw = get("rhythmus");
+    const rhythmus_klasse = normalizeRhythmus(rhythmusRaw);
+    const wochentage = extractWochentage(rhythmusRaw);
+
+    // Abteilungsübergreifend – aus Spalte lesen oder aus Teilnehmern ableiten
+    let uebergr_val = get("uebergr");
+    let abteilungsuebergreifend;
+    if (uebergr_val !== "") {
+      abteilungsuebergreifend = /ja|yes|x|true|1|✓/i.test(uebergr_val);
+    } else {
+      // Ableiten: mehr als eine Abteilung unter Teilnehmern?
+      const abts = new Set(teilnehmer.map(t => PERSON_ABT[t]).filter(Boolean));
+      abteilungsuebergreifend = abts.size > 1;
+    }
+
+    // Platzhalter – aus Spalte lesen
+    let platzh_val = get("platzh");
+    const ist_platzhalter = platzh_val !== ""
+      ? /ja|yes|x|true|1|✓/i.test(platzh_val)
+      : false;
+
+    const statusRaw = get("status");
+    const status = /aktiv/i.test(statusRaw) ? "Aktiv"
+      : /geplant|planned/i.test(statusRaw) ? "Geplant"
+      : statusRaw || "Aktiv";
+
+    meetings.push({
+      abteilung: abteilung || "–",
+      name: name || "–",
+      kategorie: get("kategorie") || "–",
+      zweck: get("zweck"),
+      verantwortlich: get("vera"),
+      teilnehmer,
+      teilnehmer_anzahl: teilnehmer.length,
+      rhythmus_raw: rhythmusRaw,
+      rhythmus_klasse,
+      wochentage,
+      infofluss: get("infofluss"),
+      status,
+      abteilungsuebergreifend,
+      ist_platzhalter,
+      learning: get("learning"),
+    });
+  }
+
+  if (meetings.length === 0) throw new Error("Keine Meetings erkannt. Bitte prüfe das Format.");
+  return meetings;
+}
+
+function findCol(headers, candidates) {
+  for (const c of candidates) {
+    const idx = headers.findIndex(h => h.includes(c));
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function splitLine(line, sep) {
+  if (sep !== ",") return line.split(sep);
+  // Handle quoted CSV
+  const result = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = ""; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Import-Screen Logic
+// ══════════════════════════════════════════════════════════════════════════════
+let MEETINGS = [];
+
+function showStatus(msg, ok) {
+  const el = document.getElementById("import-status");
+  el.textContent = msg;
+  el.className = "import-status " + (ok ? "ok" : "err");
+}
+
+function loadFromPaste() {
+  const text = document.getElementById("paste-area").value;
+  if (!text.trim()) { showStatus("Bitte füge zuerst Daten ein.", false); return; }
+  tryLoad(text);
+}
+
+function loadFromFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => tryLoad(e.target.result);
+  reader.readAsText(file, "UTF-8");
+}
+
+function tryLoad(text) {
+  try {
+    const meetings = parseData(text);
+    MEETINGS = meetings;
+    const aktive = meetings.filter(m => m.status === "Aktiv");
+    const abts = new Set(meetings.map(m => m.abteilung)).size;
+    showStatus(`✅ ${meetings.length} Meetings erkannt · ${abts} Abteilungen · ${aktive.length} aktiv`, true);
+    // Auto-proceed
+    setTimeout(() => showDashboard(), 400);
+  } catch(e) {
+    showStatus("Fehler: " + e.message, false);
+  }
+}
+
+function showDashboard() {
+  // Dynamische Konfiguration aus den geladenen Daten ableiten
+  allDepts = [...new Set(MEETINGS.map(m => m.abteilung))].filter(Boolean).sort();
+  // Auto-Ableitung gewinnt für Personen in den aktuellen Daten;
+  // PERSON_ABT dient als Fallback für Personen die nicht in Meetings vorkommen
+  effectivePersonAbt = { ...PERSON_ABT, ...autoDerivePERSON_ABT(MEETINGS) };
+  effectiveAbtFarben = buildAbtFarben(allDepts);
+
+  // FK-Set und Netzwerk-Cache zurücksetzen
+  fkSet    = new Set(FK_LIST);
+  netCache = null;
+
+  // abteilungsuebergreifend nachträglich korrekt berechnen (parseData läuft vor effectivePersonAbt)
+  MEETINGS.forEach(m => {
+    const abts = new Set(m.teilnehmer.map(t => effectivePersonAbt[t]).filter(Boolean));
+    if (abts.size > 1) m.abteilungsuebergreifend = true;
+  });
+
+  document.getElementById("import-screen").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+  renderStats();
+  renderTable();
+  renderNetzwerk();
+  // Other charts rendered lazily on first tab-visit
+}
+
+function resetToImport() {
+  MEETINGS = [];
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("import-screen").style.display = "flex";
+  document.getElementById("paste-area").value = "";
+  document.getElementById("import-status").className = "import-status";
+  document.getElementById("import-status").textContent = "";
+  // Clear chart divs
+  ["chart-netzwerk","chart-kalender","chart-overlap","chart-abt","chart-sankey"].forEach(id => {
+    document.getElementById(id).innerHTML = "";
+  });
+  document.getElementById("table-body").innerHTML = "";
+  renderedTabs.clear();
+  fkSet    = new Set(FK_LIST);
+  netCache = null;
+}
+
+// Track which tabs have been rendered
+const renderedTabs = new Set();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Stats
+// ══════════════════════════════════════════════════════════════════════════════
+function renderStats() {
+  const m = MEETINGS;
+  const aktive = m.filter(x => x.status === "Aktiv");
+  const nWoech = m.filter(x => x.rhythmus_klasse === "wöchentlich").length;
+  const nUG    = m.filter(x => x.abteilungsuebergreifend).length;
+  const nEinzel = m.filter(x => /einzelgespräch|1:1|jf/i.test(x.kategorie)).length;
+  const nPlatz = m.filter(x => x.ist_platzhalter).length;
+
+  document.getElementById("stats-bar").innerHTML = `
+    <div class="stat"><div class="val">${aktive.length}</div><div class="lbl">Aktive Meetings</div></div>
+    <div class="stat"><div class="val">${nWoech}</div><div class="lbl">Wöchentlich</div></div>
+    <div class="stat"><div class="val">${nUG}</div><div class="lbl">Abt.übergreifend</div></div>
+    <div class="stat"><div class="val">${nEinzel}</div><div class="lbl">Einzelgespräche</div></div>
+    <div class="stat"><div class="val">${nPlatz}</div><div class="lbl">⚠ Platzhalter</div></div>
+    <div class="stat"><div class="val">${m.length}</div><div class="lbl">Meetings gesamt</div></div>
+  `;
+
+  document.getElementById("header-meta").textContent =
+    `Interaktives Dashboard · ${m.length} Meetings · ${aktive.length} aktiv`;
+  document.getElementById("footer-text").textContent =
+    `Meeting Strukturanalyse · ${m.length} Meetings · ${allDepts.join(", ")}`;
+
+  // Warnings
+  const warns = [];
+  if (nPlatz) warns.push(`<b>${nPlatz} Meetings</b> mit Platzhalter-Teilnehmern (⚠)`);
+  const nOhneInfo = m.filter(x => !x.infofluss).length;
+  if (nOhneInfo) warns.push(`<b>${nOhneInfo} Meetings</b> ohne Informationsfluss-Dokumentation`);
+  document.getElementById("warnings-bar").innerHTML = warns.length
+    ? `<div class="warnings"><ul>${warns.map(w=>`<li>${w}</li>`).join("")}</ul></div>` : "";
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab Navigation
+// ══════════════════════════════════════════════════════════════════════════════
+function showTab(idx) {
+  document.querySelectorAll(".tab-btn").forEach((b,i) => b.classList.toggle("active", i===idx));
+  document.querySelectorAll(".panel").forEach((p,i) => p.classList.toggle("active", i===idx));
+
+  if (idx === 5) updateTableCount();
+
+  if (!renderedTabs.has(idx)) {
+    renderedTabs.add(idx);
+    if (idx === 1) renderKalender();
+    if (idx === 2) renderOverlap();
+    if (idx === 3) renderAbteilung();
+    if (idx === 4) renderSankey();
+  }
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const panel = document.getElementById("panel-" + idx);
+      panel.querySelectorAll(".plotly-graph-div").forEach(p => Plotly.Plots.resize(p));
+    }, 50);
+  });
+}
+
+window.addEventListener("resize", () => {
+  document.querySelectorAll(".panel.active .plotly-graph-div").forEach(p => Plotly.Plots.resize(p));
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 1: Netzwerk (d3-force + Plotly)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// renderNetzwerk: berechnet d3-force-Positionen (teuer), cached sie, ruft _plotNetzwerk auf.
+// _plotNetzwerk: baut Traces aus dem Cache – wird auch bei FK-Toggle aufgerufen (kein d3 neu).
+function renderNetzwerk() {
+  renderedTabs.add(0);
+  const aktive = MEETINGS.filter(m => m.status === "Aktiv");
+
+  // Build graph
+  const nodeSet = new Set();
+  aktive.forEach(m => m.teilnehmer.forEach(t => { if (effectivePersonAbt[t]) nodeSet.add(t); }));
+  const persons = Array.from(nodeSet);
+
+  const edgeMap = new Map();
+  aktive.forEach(m => {
+    const knoten = m.teilnehmer.filter(t => effectivePersonAbt[t]);
+    const w = FREQ_W[m.rhythmus_klasse] || 0.5;
+    for (let i = 0; i < knoten.length; i++) {
+      for (let j = i+1; j < knoten.length; j++) {
+        const [a, b] = [knoten[i], knoten[j]].sort();
+        const key = a + "||" + b;
+        if (edgeMap.has(key)) {
+          edgeMap.get(key).weight += w;
+          edgeMap.get(key).meetings.push(m.name);
+        } else {
+          edgeMap.set(key, { a, b, weight: w, meetings: [m.name] });
+        }
+      }
+    }
+  });
+  const edges = Array.from(edgeMap.values());
+
+  // d3-force layout (einmalig)
+  const nodeObjs = persons.map(id => ({ id }));
+  const personIdx = {};
+  persons.forEach((p,i) => personIdx[p] = i);
+  const linkObjs = edges.map(e => ({
+    source: personIdx[e.a], target: personIdx[e.b], weight: e.weight
+  }));
+  const sim = d3.forceSimulation(nodeObjs)
+    .force("link", d3.forceLink(linkObjs).distance(d => Math.max(80, 180 / (d.weight + 1))).strength(0.6))
+    .force("charge", d3.forceManyBody().strength(-280))
+    .force("center", d3.forceCenter(0, 0))
+    .force("collision", d3.forceCollide(30))
+    .stop();
+  sim.tick(300);
+
+  const pos = {};
+  nodeObjs.forEach(n => pos[n.id] = [n.x, n.y]);
+
+  // Degree
+  const degree = {};
+  persons.forEach(p => degree[p] = 0);
+  edges.forEach(e => { degree[e.a] = (degree[e.a]||0)+1; degree[e.b] = (degree[e.b]||0)+1; });
+
+  const connectedPersons = persons.filter(p => degree[p] > 0);
+  const isolatedCount    = persons.length - connectedPersons.length;
+
+  // Meeting-Liste pro Person (für Hover)
+  const personMeetings = {};
+  connectedPersons.forEach(p => {
+    personMeetings[p] = aktive.filter(m => m.teilnehmer.includes(p)).map(m => m.name);
+  });
+
+  // Cache speichern
+  netCache = { pos, edges, connectedPersons, isolatedCount, degree, personMeetings };
+
+  _plotNetzwerk(true);
+}
+
+function _plotNetzwerk(firstRender) {
+  const { pos, edges, connectedPersons, isolatedCount, degree, personMeetings } = netCache;
+
+  // Edge traces
+  const edgeTraces = edges.map(e => {
+    const [x0,y0] = pos[e.a], [x1,y1] = pos[e.b];
+    const w = Math.min(e.weight, 10);
+    const mn = e.meetings.slice(0,5).join("<br>");
+    return {
+      x:[x0,x1,null], y:[y0,y1,null], mode:"lines",
+      line:{width: w*0.5+0.3, color:"rgba(156,163,175,0.45)"},
+      hovertext:`<b>${e.a} ↔ ${e.b}</b><br>${mn}`,
+      hoverinfo:"text", showlegend:false, opacity:1.0, type:"scatter"
+    };
+  });
+
+  // Node traces (Symbol hängt von fkSet ab)
+  const nodeTraces = connectedPersons.map(p => {
+    const abt   = effectivePersonAbt[p] || "unbekannt";
+    const sub   = PERSON_SUBTEAM[p] || "";
+    const deg   = degree[p] || 0;
+    const isFk  = fkSet.has(p);
+    const pMtgs = personMeetings[p] || [];
+    const hover = `<b>${p}</b>${isFk ? " ★" : ""} · ${abt}${sub ? " / "+sub : ""}<br>` +
+      `Meetings (${pMtgs.length}): ` + pMtgs.slice(0,6).join(", ") + (pMtgs.length > 6 ? "…" : "");
+    return {
+      x:[pos[p][0]], y:[pos[p][1]],
+      mode:"markers+text",
+      text:[p], textposition:"top center",
+      textfont:{size:9, color:"#374151"},
+      marker:{
+        size: 10 + deg*2.8,
+        color: effectiveAbtFarben[abt] || "#9ca3af",
+        symbol: isFk ? "star" : "circle",
+        line:{width: isFk ? 2 : 1, color:"white"},
+        opacity: 1.0
+      },
+      name:p, hovertext:hover, hoverinfo:"text",
+      showlegend:false, opacity:1.0, type:"scatter"
+    };
+  });
+
+  // FK-Filter-Buttons (nur FKs aus fkSet die im Netzwerk sichtbar sind)
+  const n_edge = edgeTraces.length;
+  const n_node = nodeTraces.length;
+
+  function makeOps(fk) {
+    const nbrs = new Set(edges.flatMap(e => (e.a===fk||e.b===fk) ? [e.a,e.b] : []));
+    nbrs.add(fk);
+    const e_ops = edges.map(e => (e.a===fk||e.b===fk) ? 0.7 : 0.04);
+    const n_ops = connectedPersons.map(p => nbrs.has(p) ? 1.0 : 0.08);
+    return e_ops.concat(n_ops);
+  }
+  const alleOps  = Array(n_edge + n_node).fill(1.0);
+  const fkInNet  = connectedPersons.filter(p => fkSet.has(p));
+  const fkButtons = [{ label:"Alle", method:"restyle", args:[{opacity: alleOps}] }];
+  fkInNet.forEach(fk => {
+    fkButtons.push({ label: fk + " ★", method:"restyle", args:[{opacity: makeOps(fk)}] });
+  });
+
+  // Legend traces
+  const shownAbts = new Set();
+  const legendTraces = [];
+  connectedPersons.forEach(p => {
+    const abt = effectivePersonAbt[p] || "unbekannt";
+    if (!shownAbts.has(abt)) {
+      shownAbts.add(abt);
+      legendTraces.push({
+        x:[null], y:[null], mode:"markers",
+        marker:{size:12, color:effectiveAbtFarben[abt]||"#9ca3af"},
+        name:abt, showlegend:true, type:"scatter"
+      });
+    }
+  });
+
+  // Hint aktualisieren
+  const hintEl = document.getElementById("hint-netzwerk");
+  if (hintEl) {
+    const fkHint = fkInNet.length > 0
+      ? `Aktive FKs: ${fkInNet.join(", ")} · `
+      : "Noch keine FK markiert · ";
+    hintEl.textContent = "★ = Führungskraft · Klick auf Knoten = als FK markieren/entfernen · "
+      + fkHint
+      + "Knotengröße = Meeting-Anzahl · Liniendicke = Frequenz"
+      + (isolatedCount > 0 ? ` · ${isolatedCount} isolierte Knoten ausgeblendet` : "");
+  }
+
+  const allTraces = [...edgeTraces, ...nodeTraces, ...legendTraces];
+  const layout = {
+    title:{text:"Kommunikationsnetzwerk – Wer trifft wen?", font:{size:16,family:"Inter"}},
+    updatemenus: fkButtons.length > 1 ? [{
+      type:"buttons", direction:"right",
+      x:0.0, xanchor:"left", y:1.10, yanchor:"top",
+      bgcolor:"#f1f5f9", bordercolor:"#e2e8f0",
+      font:{size:11, color:"#374151"},
+      buttons: fkButtons, active:0, pad:{r:4,t:4},
+      showactive:true
+    }] : [],
+    annotations: fkButtons.length > 1 ? [{
+      text:"<b>FK-Filter:</b>", x:0.0, xanchor:"left",
+      y:1.145, yanchor:"top", xref:"paper", yref:"paper",
+      showarrow:false, font:{size:11,color:"#6b7280"}
+    }] : [],
+    showlegend:true,
+    legend:{title:{text:"Abteilung"}, itemsizing:"constant", x:1.01, y:1},
+    hovermode:"closest",
+    xaxis:{showgrid:false,zeroline:false,showticklabels:false},
+    yaxis:{showgrid:false,zeroline:false,showticklabels:false},
+    plot_bgcolor:"white", paper_bgcolor:"white",
+    height:640, margin:{l:10,r:140,t:80,b:10}
+  };
+
+  const chartEl = document.getElementById("chart-netzwerk");
+  if (firstRender) {
+    Plotly.newPlot(chartEl, allTraces, layout, {responsive:true, displayModeBar:true});
+    // Klick-Listener: Person als FK markieren / entfernen
+    chartEl.on("plotly_click", function(data) {
+      if (!data.points.length) return;
+      const person = data.points[0].data.name;
+      // Nur Node-Traces haben einen Person-Namen (Edge-Traces haben keinen)
+      if (!netCache || !netCache.connectedPersons.includes(person)) return;
+      if (fkSet.has(person)) fkSet.delete(person);
+      else fkSet.add(person);
+      _plotNetzwerk(false);
+    });
+  } else {
+    Plotly.react(chartEl, allTraces, layout);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 2: Kalender
+// ══════════════════════════════════════════════════════════════════════════════
+function renderKalender() {
+  const aktive = MEETINGS.filter(m => m.status === "Aktiv");
+  const tageO = ["Mo","Di","Mi","Do","Fr","—"];
+  const rhyO  = ["variabel","quartalsweise","monatlich","zweiwöchentlich","dreiwöchentlich","wöchentlich","täglich"];
+
+  const agg = {};
+  aktive.forEach(m => {
+    const tage = m.wochentage.length ? m.wochentage : ["—"];
+    tage.forEach(tag => {
+      const key = tag + "||" + m.rhythmus_klasse;
+      if (!agg[key]) agg[key] = { tag, rhy:m.rhythmus_klasse, meetings:[] };
+      agg[key].meetings.push(m.name);
+    });
+  });
+
+  const xs=[],ys=[],szs=[],txts=[],hvrs=[],cols=[];
+  Object.values(agg).forEach(({tag,rhy,meetings}) => {
+    xs.push(tag); ys.push(rhy);
+    szs.push(14 + meetings.length*16);
+    txts.push(String(meetings.length));
+    hvrs.push(`<b>${tag} / ${rhy}</b><br>` + meetings.join("<br>"));
+    cols.push(RHY_FARBEN[rhy] || "#9ca3af");
+  });
+
+  const trace = {
+    x:xs, y:ys, mode:"markers+text", text:txts,
+    textfont:{size:12,color:"white"},
+    marker:{size:szs, color:cols, sizemode:"diameter", line:{width:1,color:"white"}},
+    hovertext:hvrs, hoverinfo:"text", type:"scatter"
+  };
+  const layout = {
+    title:{text:"Meeting-Kalender – Wann findet was statt?",font:{size:16,family:"Inter"}},
+    xaxis:{title:"Wochentag",categoryorder:"array",categoryarray:tageO,showgrid:true,gridcolor:"#f3f4f6"},
+    yaxis:{title:"Rhythmus",categoryorder:"array",categoryarray:rhyO,showgrid:true,gridcolor:"#f3f4f6"},
+    plot_bgcolor:"white",paper_bgcolor:"white",
+    height:460, margin:{l:150,r:20,t:60,b:80},
+    annotations:[{
+      text:"Bubble-Größe = Anzahl Meetings · Hover für Details",
+      xref:"paper",yref:"paper",x:0,y:-0.16,showarrow:false,
+      font:{size:10,color:"#9ca3af"}
+    }]
+  };
+  Plotly.newPlot("chart-kalender", [trace], layout, {responsive:true});
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 3: Überschneidungen (Jaccard Heatmap)
+// ══════════════════════════════════════════════════════════════════════════════
+function renderOverlap() {
+  const ml = MEETINGS.filter(m => m.status === "Aktiv" && m.teilnehmer.length >= 2);
+  const namen = ml.map(m => m.name);
+  const sets  = ml.map(m => new Set(m.teilnehmer));
+  const n = ml.length;
+
+  const matrix=[], hover=[];
+  for (let i=0;i<n;i++) {
+    const mr=[],hr=[];
+    for (let j=0;j<n;j++) {
+      let v;
+      if (i===j) { v=1.0; }
+      else {
+        const inter = [...sets[i]].filter(x => sets[j].has(x));
+        const union = new Set([...sets[i], ...sets[j]]);
+        v = union.size ? Math.round(inter.length/union.size*100)/100 : 0;
+      }
+      mr.push(v);
+      const gem = [...sets[i]].filter(x => sets[j].has(x));
+      hr.push(`<b>${namen[i]}</b> ↔ <b>${namen[j]}</b><br>Ähnlichkeit: ${(v*100).toFixed(0)}%<br>Gemeinsam: ${gem.sort().join(", ") || "–"}`);
+    }
+    matrix.push(mr); hover.push(hr);
+  }
+
+  const trace = {
+    type:"heatmap",
+    z:matrix, x:namen, y:namen,
+    text:matrix.map(r => r.map(v => v>0 ? `${(v*100).toFixed(0)}%` : "")),
+    texttemplate:"%{text}", textfont:{size:8},
+    colorscale:[[0,"#16a34a"],[0.5,"#fbbf24"],[1,"#dc2626"]], zmin:0, zmax:1,
+    hovertext:hover, hoverinfo:"text",
+    colorbar:{title:{text:"Jaccard<br>Ähnlichkeit"}}
+  };
+  const layout = {
+    title:{text:"Teilnehmer-Überschneidung – Welche Meetings sind ähnlich?",font:{size:16,family:"Inter"}},
+    height:700, margin:{l:210,r:100,t:60,b:210},
+    xaxis:{tickangle:-45,tickfont:{size:9}},
+    yaxis:{tickfont:{size:9}},
+    annotations:[{
+      text:"Rot = hohe Überschneidung (potenzielle Redundanz) · Hover für Details",
+      xref:"paper",yref:"paper",x:0,y:-0.3,showarrow:false,
+      font:{size:10,color:"#9ca3af"}
+    }]
+  };
+  Plotly.newPlot("chart-overlap", [trace], layout, {responsive:true});
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 4: Abteilungen (stacked Bar)
+// ══════════════════════════════════════════════════════════════════════════════
+function renderAbteilung() {
+  const aktive = MEETINGS.filter(m => m.status === "Aktiv");
+  const xAbts = allDepts; // dynamisch aus geladenen Daten
+  const rhyO = ["täglich","wöchentlich","dreiwöchentlich","zweiwöchentlich","monatlich","quartalsweise","variabel"];
+
+  // abt_rhy[abt][rhy] = [meeting names]
+  const abt_rhy = {};
+  xAbts.forEach(a => { abt_rhy[a] = {}; rhyO.forEach(r => abt_rhy[a][r] = []); });
+  aktive.forEach(m => {
+    const a = (m.abteilung || "").trim();
+    if (!abt_rhy[a]) return; // unbekannte Abteilung → ignorieren
+    const rhy = rhyO.includes(m.rhythmus_klasse) ? m.rhythmus_klasse : "variabel";
+    abt_rhy[a][rhy].push(m.name);
+  });
+
+  const traces = rhyO.map(rhy => ({
+    type:"bar",
+    name: rhy,
+    x: xAbts,
+    y: xAbts.map(a => (abt_rhy[a]?.[rhy] || []).length),
+    marker:{color: RHY_FARBEN[rhy] || "#9ca3af"},
+    hovertext: xAbts.map(a => {
+      const mn = abt_rhy[a]?.[rhy] || [];
+      return `<b>${a} / ${rhy}</b><br>` + (mn.length ? mn.join("<br>") : "–");
+    }),
+    hoverinfo:"text"
+  }));
+
+  const layout = {
+    barmode:"stack",
+    title:{text:"Meeting-Dichte pro Abteilung",font:{size:16,family:"Inter"}},
+    xaxis:{title:"Abteilung"},
+    yaxis:{title:"Anzahl Meetings",showgrid:true,gridcolor:"#f3f4f6"},
+    legend:{title:{text:"Rhythmus"}},
+    plot_bgcolor:"white", paper_bgcolor:"white",
+    height:440, margin:{l:60,r:20,t:60,b:60}
+  };
+  Plotly.newPlot("chart-abt", traces, layout, {responsive:true});
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 5: Informationsfluss (Sankey)
+// ══════════════════════════════════════════════════════════════════════════════
+function renderSankey() {
+  const aktive = MEETINGS.filter(m => m.status === "Aktiv");
+  // Extern nur hinzufügen wenn ein Teilnehmer exakt "Extern" heißt (nicht bei Platzhaltern wie "externer Prüfer")
+  const hasExtern = aktive.some(m => m.teilnehmer.some(t => t.toLowerCase() === "extern"));
+  const abtList = hasExtern ? [...allDepts, "Extern"] : [...allDepts];
+  const abtIdx = {};
+  abtList.forEach((a,i) => abtIdx[a] = i);
+
+  const fluss = {};
+
+  aktive.forEach(m => {
+    const abts = new Set();
+    m.teilnehmer.forEach(t => {
+      if (effectivePersonAbt[t]) abts.add(effectivePersonAbt[t]);
+    });
+    if (m.teilnehmer.some(t => t.toLowerCase() === "extern")) abts.add("Extern");
+    const normAbt = (m.abteilung || "").trim();
+    if (abtList.includes(normAbt)) abts.add(normAbt);
+
+    const al = [...abts].filter(a => abtList.includes(a)).sort();
+    const w = FREQ_W[m.rhythmus_klasse] || 0.5;
+    for (let i=0;i<al.length;i++) {
+      for (let j=i+1;j<al.length;j++) {
+        const key = al[i] + "||" + al[j];
+        fluss[key] = (fluss[key] || 0) + w;
+      }
+    }
+  });
+
+  // Keine abteilungsübergreifenden Meetings → Hinweis statt leeres Diagramm
+  if (Object.keys(fluss).length === 0) {
+    document.getElementById("chart-sankey").innerHTML =
+      `<div style="text-align:center;padding:60px 20px;color:#94a3b8;font-size:.95rem">
+        Keine abteilungsübergreifenden Meetings in den Daten.<br>
+        <span style="font-size:.8rem">Das Sankey-Diagramm zeigt nur Verbindungen zwischen verschiedenen Abteilungen.</span>
+      </div>`;
+    return;
+  }
+
+  const srcs=[],tgts=[],vals=[],lbls=[],linkColors=[];
+  Object.entries(fluss).forEach(([key,v]) => {
+    const [a,b] = key.split("||");
+    srcs.push(abtIdx[a]);
+    tgts.push(abtIdx[b]);
+    vals.push(Math.round(v*10)/10);
+    lbls.push(`${a} ↔ ${b}: ${v.toFixed(1)} Freq.-Punkte`);
+    const hex = (effectiveAbtFarben[a]||"#9ca3af").replace("#","");
+    const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),bv=parseInt(hex.slice(4,6),16);
+    linkColors.push(`rgba(${r},${g},${bv},0.35)`);
+  });
+
+  const trace = {
+    type:"sankey",
+    node:{
+      pad:24, thickness:24,
+      line:{color:"white",width:0.5},
+      label:abtList,
+      color:abtList.map(a => effectiveAbtFarben[a]||"#9ca3af"),
+      hovertemplate:"<b>%{label}</b><extra></extra>"
+    },
+    link:{
+      source:srcs, target:tgts, value:vals,
+      customdata:lbls,
+      hovertemplate:"<b>%{customdata}</b><extra></extra>",
+      color:linkColors
+    }
+  };
+  const layout = {
+    title:{text:"Informationsfluss zwischen Abteilungen · Flussdicke = gewichtete Meeting-Frequenz",
+      font:{size:15,family:"Inter"}},
+    height:440, margin:{l:20,r:20,t:60,b:30}
+  };
+  Plotly.newPlot("chart-sankey", [trace], layout, {responsive:true});
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 6: Tabelle
+// ══════════════════════════════════════════════════════════════════════════════
+function renderTable() {
+  const tbody = document.getElementById("table-body");
+  tbody.innerHTML = "";
+  MEETINGS.forEach(m => {
+    const abtCol = effectiveAbtFarben[m.abteilung] || "#9ca3af";
+    const teilnStr = m.teilnehmer.join(", ") || "–";
+    const vera = m.verantwortlich || "–";
+    const statusCls = m.status === "Aktiv" ? "badge-aktiv" : "badge-geplant";
+    const ug = m.abteilungsuebergreifend ? "✓" : "";
+    const zweck = m.zweck ? (m.zweck.length > 110 ? m.zweck.slice(0,110)+"…" : m.zweck) : "–";
+    const learning = m.learning || "–";
+    const platzh = m.ist_platzhalter
+      ? ' <span class="platzh-badge">⚠ Platzhalter</span>' : "";
+    const tr = document.createElement("tr");
+    tr.setAttribute("data-abt", m.abteilung);
+    tr.setAttribute("data-vera", vera);
+    tr.setAttribute("data-teiln", teilnStr);
+    tr.innerHTML = `
+      <td><span class="abt-badge" style="background:${abtCol}22;color:${abtCol};border:1px solid ${abtCol}55">${m.abteilung}</span></td>
+      <td class="meeting-name">${m.name}${platzh}</td>
+      <td><span class="kat-pill">${m.kategorie}</span></td>
+      <td><span class="rhy-dot" style="background:${RHY_FARBEN[m.rhythmus_klasse]||'#9ca3af'}"></span>${m.rhythmus_klasse}</td>
+      <td>${vera}</td>
+      <td class="teiln-cell">${teilnStr}</td>
+      <td><span class="badge ${statusCls}">${m.status}</span></td>
+      <td style="text-align:center">${ug}</td>
+      <td class="zweck-cell">${zweck}</td>
+      <td class="learning-cell">${learning}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  updateTableCount();
+}
+
+function filterTable() {
+  const q = (document.getElementById("table-search").value||"").toLowerCase().trim();
+  const rows = document.querySelectorAll("#meeting-table tbody tr");
+  let shown = 0;
+  rows.forEach(row => {
+    const text = (
+      row.querySelector(".meeting-name").textContent + " " +
+      row.getAttribute("data-teiln") + " " +
+      row.getAttribute("data-abt") + " " +
+      row.getAttribute("data-vera")
+    ).toLowerCase();
+    const vis = !q || text.includes(q);
+    row.style.display = vis ? "" : "none";
+    if (vis) shown++;
+  });
+  document.getElementById("table-count").textContent =
+    shown + " von " + MEETINGS.length + " Meetings";
+}
+
+function updateTableCount() {
+  const total = document.querySelectorAll("#meeting-table tbody tr").length;
+  document.getElementById("table-count").textContent = total + " von " + MEETINGS.length + " Meetings";
+}
+</script>
+</body>
+</html>

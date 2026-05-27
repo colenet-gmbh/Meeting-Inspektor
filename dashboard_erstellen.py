@@ -6,9 +6,9 @@ Aufruf:
     python3 dashboard_erstellen.py
 """
 
-import json, re
+import json, re, datetime
 from pathlib import Path
-from collections import defaultdict
+from collections import Counter, defaultdict
 import networkx as nx
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -18,28 +18,16 @@ OUTPUT = Path(__file__).parent / "meeting_strukturanalyse.html"
 
 # ── Personen-Mapping ────────────────────────────────────────────────────────
 PERSON_ABT = {
-    "Jco":"PC","MiG":"PC","Ktz":"PC","Lav":"PC","Rls":"PC",
-    "Sez":"PC","Bre":"PC","DrS":"PC","Zeller":"PC",
-    "Beb":"PCO","Ipa":"PCO","Fln":"PCO","Zes":"PCO","LeB":"PCO",
-    "Kip":"PCT","Kis":"PCT","Rre":"PCT","Lic":"PCT","Leo":"PCT","Gam":"PCT","Ran":"PCT",
-    "Krö":"PCT","Dem":"PCT","Bas":"PCT","CST":"PCT",
-    "Dni":"PCT","Bra":"PCT","Fef":"PCT","FMD":"PCT","Wud":"PCT","Kih":"PCT","HeT":"PCT",
-    "TOK":"PCC","ADA":"PCC","JFR":"PCC","SMI":"PCC","MGR":"PCC","MOS":"PCC","AWA":"PCC",
-    "Urk":"PCS","Zrb":"PCS","Smt":"PCS","KTF":"PCS","Arg":"PCS","Lke":"PCS","Tih":"PCS","Laa":"PCS",
+    # Override Person→Abteilung; leer = automatisch aus den Meeting-Daten abgeleitet
 }
 PERSON_SUBTEAM = {
-    "Kis":"AC","Rre":"AC","Lic":"AC","Leo":"AC","Gam":"AC","Ran":"AC",
-    "Krö":"DC","Dem":"DC","Bas":"DC","CST":"DC",
-    "Dni":"PC Products","Bra":"PC Products","Fef":"PC Products",
-    "FMD":"PC Products","Wud":"PC Products","Kih":"PC Products","HeT":"PC Products",
-    "Kip":"PCT Leitung",
+    # Optionale Subteam-Zuordnung für Hover-Texte
 }
-# Nur tatsächliche Führungskräfte (laut Organigramm, blau markiert), alphabetisch
-FK_LIST = ["Beb","Jco","Kip","Ktz","MiG","TOK","Urk"]
-
+FK_LIST = [
+    # Führungskräfte (Stern-Symbol im Netzwerk); leer = keine Hervorhebung
+]
 ABT_FARBEN = {
-    "PC":"#2563eb","PCO":"#f59e0b","PCT":"#16a34a",
-    "PCC":"#dc2626","PCS":"#7c3aed","unbekannt":"#9ca3af",
+    # Override Abteilungsfarben; leer = automatisch aus der Palette vergeben
 }
 RHY_FARBEN = {
     "täglich":"#dc2626","wöchentlich":"#2563eb","dreiwöchentlich":"#0891b2",
@@ -52,6 +40,22 @@ FREQ_W = {"täglich":5,"wöchentlich":4,"dreiwöchentlich":3,
 with open(INPUT, encoding="utf-8") as f:
     meetings = json.load(f)
 aktive = [m for m in meetings if m["status"] == "Aktiv"]
+
+_COLOR_PALETTE = ["#2563eb","#f59e0b","#16a34a","#dc2626","#7c3aed",
+                  "#0891b2","#d97706","#65a30d","#db2777","#ea580c"]
+
+if not PERSON_ABT:
+    _votes: dict = defaultdict(Counter)
+    for m in meetings:
+        abt = m.get("abteilung", "Unbekannt")
+        for p in m.get("teilnehmer", []):
+            _votes[p][abt] += 1
+    PERSON_ABT = {p: ctr.most_common(1)[0][0] for p, ctr in _votes.items() if ctr}
+
+if not ABT_FARBEN:
+    _abts = sorted({a for a in PERSON_ABT.values()})
+    ABT_FARBEN = {a: _COLOR_PALETTE[i % len(_COLOR_PALETTE)] for i, a in enumerate(_abts)}
+    ABT_FARBEN.setdefault("unbekannt", "#9ca3af")
 
 def fig_div(fig):
     # include_plotlyjs=False → Plotly wird einmal global eingebunden (s. HTML-Template)
@@ -593,7 +597,7 @@ body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;
 
 <div class="header">
   <h1>Organisations-Meeting &amp; Informationsfluss</h1>
-  <p>Interaktives Dashboard · Stand: 26.05.2026 · Quelle: LeitMet.xlsx · {len(meetings)} Meetings</p>
+  <p>Interaktives Dashboard · Stand: {datetime.date.today().strftime('%d.%m.%Y')} · {len(meetings)} Meetings</p>
 </div>
 
 <div class="stats">
@@ -648,7 +652,7 @@ body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;
 </div>
 
 <div class="footer">
-  Erstellt mit Claude Code · Colenet · {len(meetings)} Meetings · Daten: LeitMet.xlsx (vertraulich, lokal)
+  Erstellt mit Claude Code · {len(meetings)} Meetings
 </div>
 
 <script>
