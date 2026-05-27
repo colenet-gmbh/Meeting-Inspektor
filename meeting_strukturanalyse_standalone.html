@@ -685,6 +685,11 @@ function renderNetzwerk() {
   persons.forEach(p => degree[p] = 0);
   edges.forEach(e => { degree[e.a] = (degree[e.a]||0)+1; degree[e.b] = (degree[e.b]||0)+1; });
 
+  // Isolierte Knoten (Grad 0) ausblenden – das sind Platzhalter-Teilnehmer oder Personen
+  // die ausschließlich in Einzelgesprächen ohne weitere Verbindungen auftauchen.
+  const connectedPersons = persons.filter(p => degree[p] > 0);
+  const isolatedCount = persons.length - connectedPersons.length;
+
   // Edge traces
   const edgeTraces = edges.map(e => {
     const [x0,y0] = pos[e.a], [x1,y1] = pos[e.b];
@@ -698,8 +703,8 @@ function renderNetzwerk() {
     };
   });
 
-  // Node traces (one per person for opacity control)
-  const nodeTraces = persons.map(p => {
+  // Node traces (nur verbundene Personen, eine Spur pro Person für Opacity-Steuerung)
+  const nodeTraces = connectedPersons.map(p => {
     const abt = effectivePersonAbt[p] || "unbekannt";
     const sub = PERSON_SUBTEAM[p] || "";
     const deg = degree[p] || 0;
@@ -724,27 +729,28 @@ function renderNetzwerk() {
     };
   });
 
-  // Dropdown for FK filter (nur wenn FK_LIST nicht leer)
+  // FK-Filter als klickbare Buttons (nur FKs die tatsächlich in den Daten vorkommen)
   const n_edge = edgeTraces.length;
-  const n_node = nodeTraces.length;
+  const n_node = nodeTraces.length; // entspricht connectedPersons.length
 
   function makeOps(fk) {
     const nbrs = new Set(edges.flatMap(e => (e.a===fk||e.b===fk) ? [e.a,e.b] : []));
     nbrs.add(fk);
     const e_ops = edges.map(e => (e.a===fk||e.b===fk) ? 0.7 : 0.04);
-    const n_ops = persons.map(p => nbrs.has(p) ? 1.0 : 0.08);
+    const n_ops = connectedPersons.map(p => nbrs.has(p) ? 1.0 : 0.08);
     return e_ops.concat(n_ops);
   }
   const alleOps = Array(n_edge + n_node).fill(1.0);
-  const buttons = [{ label:"Alle", method:"restyle", args:[{opacity: alleOps}] }];
+  const fkButtons = [{ label:"Alle", method:"restyle", args:[{opacity: alleOps}] }];
   FK_LIST.forEach(fk => {
-    if (pos[fk]) buttons.push({ label:fk, method:"restyle", args:[{opacity: makeOps(fk)}] });
+    if (pos[fk] && degree[fk] > 0)
+      fkButtons.push({ label:fk, method:"restyle", args:[{opacity: makeOps(fk)}] });
   });
 
-  // Legend traces (one per Abteilung)
+  // Legend traces (nur Abteilungen verbundener Personen)
   const shownAbts = new Set();
   const legendTraces = [];
-  persons.forEach(p => {
+  connectedPersons.forEach(p => {
     const abt = effectivePersonAbt[p] || "unbekannt";
     if (!shownAbts.has(abt)) {
       shownAbts.add(abt);
@@ -757,19 +763,28 @@ function renderNetzwerk() {
   });
 
   const allTraces = [...edgeTraces, ...nodeTraces, ...legendTraces];
+
+  // Hint-Text aktualisieren
+  const hintEl = document.querySelector("#panel-0 .hint");
+  const hintBase = "Stern = Führungskraft · Knotengröße = Meeting-Anzahl · Liniendicke = Frequenz";
+  hintEl.textContent = hintBase
+    + (isolatedCount > 0 ? ` · ${isolatedCount} isolierte Knoten (keine gemeinsamen Meetings) ausgeblendet` : "");
+
   const layout = {
     title:{text:"Kommunikationsnetzwerk – Wer trifft wen?", font:{size:16,family:"Inter"}},
-    updatemenus:[{
-      type:"dropdown", direction:"down",
-      x:0.01, xanchor:"left", y:1.12, yanchor:"top",
-      bgcolor:"white", bordercolor:"#e5e7eb", font:{size:12},
-      buttons, active:0, pad:{r:10,t:5}
-    }],
-    annotations:[{
-      text:"<b>Personen-Filter:</b>", x:0.01, xanchor:"left",
-      y:1.15, yanchor:"top", xref:"paper", yref:"paper",
+    updatemenus: fkButtons.length > 1 ? [{
+      type:"buttons", direction:"right",
+      x:0.0, xanchor:"left", y:1.10, yanchor:"top",
+      bgcolor:"#f1f5f9", bordercolor:"#e2e8f0",
+      font:{size:11, color:"#374151"},
+      buttons: fkButtons, active:0, pad:{r:4,t:4},
+      showactive:true
+    }] : [],
+    annotations: fkButtons.length > 1 ? [{
+      text:"<b>FK-Filter:</b>", x:0.0, xanchor:"left",
+      y:1.145, yanchor:"top", xref:"paper", yref:"paper",
       showarrow:false, font:{size:11,color:"#6b7280"}
-    }],
+    }] : [],
     showlegend:true,
     legend:{title:{text:"Abteilung"}, itemsizing:"constant", x:1.01, y:1},
     hovermode:"closest",
