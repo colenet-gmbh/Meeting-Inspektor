@@ -305,7 +305,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "28.05.2026 21:41";
+const APP_VERSION = "28.05.2026 21:48";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -540,6 +540,15 @@ function parseData(text) {
     );
   }
 
+  // Case-insensitive Kürzel-Deduplication: erste gesehene Schreibweise gewinnt.
+  const abbrevCanonical = new Map();
+  function canonAbbr(s) {
+    if (!s) return s;
+    const key = s.toLowerCase();
+    if (!abbrevCanonical.has(key)) abbrevCanonical.set(key, s);
+    return abbrevCanonical.get(key);
+  }
+
   const meetings = [];
   for (let i = headerLineIdx + 1; i < lines.length; i++) {
     const cells = splitLine(lines[i], sep);
@@ -556,7 +565,7 @@ function parseData(text) {
     // Parse Teilnehmer
     const teilnRaw = get("teiln");
     const teilnehmer = teilnRaw
-      ? teilnRaw.split(/[,;]/).map(t => normalizeAlias(t.trim())).filter(Boolean)
+      ? teilnRaw.split(/[,;]/).map(t => canonAbbr(normalizeAlias(t.trim()))).filter(Boolean)
       : [];
 
     const rhythmusRaw = get("rhythmus");
@@ -590,7 +599,7 @@ function parseData(text) {
       name: name || "–",
       kategorie: get("kategorie") || "–",
       zweck: get("zweck"),
-      verantwortlich: get("vera"),
+      verantwortlich: canonAbbr(normalizeAlias(get("vera"))),
       teilnehmer,
       teilnehmer_anzahl: teilnehmer.length,
       rhythmus_raw: rhythmusRaw,
