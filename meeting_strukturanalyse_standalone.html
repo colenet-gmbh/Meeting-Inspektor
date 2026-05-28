@@ -158,6 +158,12 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 .person-popover-item.selected::before{content:"●";font-size:.5rem;color:#59B2A5}
 .person-popover-sep{height:1px;background:#f1f5f9;margin:4px 0}
 
+/* Sonder-Spalten im Personen-Tab */
+.personen-grid-sep{width:1px;background:#e2e8f0;margin:0 6px;align-self:stretch;flex-shrink:0}
+.dept-col.special .dept-col-header{background:#6b7280 !important}
+.dept-col.special-mgmt .dept-col-header{background:#7c6bab !important}
+.dept-col.special-extern .dept-col-header{background:#6b7280 !important}
+
 /* Aktions-Leiste */
 .personen-actions{position:fixed;bottom:0;left:0;right:0;background:white;
   border-top:1px solid #e2e8f0;padding:12px 36px;display:flex;gap:12px;
@@ -318,6 +324,12 @@ const FREQ_W = {
   "zweiwöchentlich":2,"monatlich":1,"quartalsweise":0.5,"variabel":0.5
 };
 
+// Feste Sonder-Kategorien – immer im Personen-Tab sichtbar, nicht aus Daten abgeleitet
+const SPECIAL_DEPTS = [
+  { key: "Management", label: "Management",  title: "Intern – übergeordnet (berichtet an sie)",  cssClass: "special-mgmt",   color: "#7c6bab" },
+  { key: "Extern",     label: "Extern",       title: "Externe Partner / Unternehmen",             cssClass: "special-extern",  color: "#6b7280" },
+];
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Dynamische Konfiguration – wird nach dem Laden der Daten berechnet
 // ══════════════════════════════════════════════════════════════════════════════
@@ -353,6 +365,8 @@ function autoDerivePERSON_ABT(meetings) {
 function buildAbtFarben(depts) {
   const result = {};
   depts.forEach((d,i) => { result[d] = ABT_FARBEN[d] || PALETTE[i % PALETTE.length]; });
+  // Sonder-Kategorien mit festen Farben (überschreibbar via ABT_FARBEN)
+  SPECIAL_DEPTS.forEach(sd => { result[sd.key] = ABT_FARBEN[sd.key] || sd.color; });
   return result;
 }
 
@@ -1148,7 +1162,14 @@ function renderSankey() {
   const aktive = MEETINGS.filter(m => m.status === "Aktiv");
   // Extern nur hinzufügen wenn ein Teilnehmer exakt "Extern" heißt (nicht bei Platzhaltern wie "externer Prüfer")
   const hasExtern = aktive.some(m => m.teilnehmer.some(t => t.toLowerCase() === "extern"));
-  const abtList = hasExtern ? [...allDepts, "Extern"] : [...allDepts];
+  // Sonder-Kategorien hinzufügen, sobald mindestens eine Person dort zugeordnet ist
+  const usedSpecialDepts = SPECIAL_DEPTS.map(sd => sd.key)
+    .filter(k => Object.values(effectivePersonAbt).includes(k));
+  const abtList = [...new Set([
+    ...allDepts,
+    ...(hasExtern ? ["Extern"] : []),
+    ...usedSpecialDepts
+  ])];
   const abtIdx = {};
   abtList.forEach((a,i) => abtIdx[a] = i);
 
@@ -1309,6 +1330,8 @@ function renderPersonenTab() {
   // Alle Personen nach ihrer zugewiesenen Abteilung gruppieren
   const deptPersons = {};
   allDepts.forEach(d => deptPersons[d] = []);
+  // Sonder-Kategorien ebenfalls vorbereiten
+  SPECIAL_DEPTS.forEach(sd => deptPersons[sd.key] = []);
 
   // Personen aus MEETINGS sammeln (unique, geordnet nach Name)
   // Generische Platzhalter-Namen (Leerzeichen = Beschreibung, keine Abkürzung) herausfiltern
@@ -1323,29 +1346,44 @@ function renderPersonenTab() {
     if (dept && deptPersons[dept] !== undefined) {
       deptPersons[dept].push(p);
     } else if (dept) {
-      // Abteilung außerhalb allDepts (seltener Fall)
+      // Abteilung außerhalb allDepts/SPECIAL_DEPTS (seltener Fall)
       if (!deptPersons[dept]) deptPersons[dept] = [];
       deptPersons[dept].push(p);
     }
   });
 
-  // Eine Spalte pro Abteilung
+  // Eine Spalte pro reguläre Abteilung
   allDepts.forEach(dept => {
-    const col = document.createElement("div");
-    col.className = "dept-col";
-    col.dataset.dept = dept;
+    grid.appendChild(_buildDeptCol(dept, effectiveAbtFarben[dept] || "#59B2A5", deptPersons[dept] || [], null));
+  });
 
-    const hdr = document.createElement("div");
-    hdr.className = "dept-col-header";
-    hdr.style.background = effectiveAbtFarben[dept] || "#59B2A5";
-    hdr.textContent = dept;
-    col.appendChild(hdr);
+  // Visueller Trenner vor den Sonder-Spalten
+  const sep = document.createElement("div");
+  sep.className = "personen-grid-sep";
+  grid.appendChild(sep);
 
-    (deptPersons[dept] || []).forEach(p => {
-      col.appendChild(buildPersonChip(p, dept));
-    });
+  // Sonder-Spalten: Management & Extern
+  SPECIAL_DEPTS.forEach(sd => {
+    const col = _buildDeptCol(sd.key, sd.color, deptPersons[sd.key] || [], sd.cssClass);
+    col.title = sd.title;
     grid.appendChild(col);
   });
+}
+
+// Hilfsfunktion: baut eine einzelne Dept-Spalte (regulär oder Sonder)
+function _buildDeptCol(dept, color, persons, specialClass) {
+  const col = document.createElement("div");
+  col.className = "dept-col" + (specialClass ? " special " + specialClass : "");
+  col.dataset.dept = dept;
+
+  const hdr = document.createElement("div");
+  hdr.className = "dept-col-header";
+  hdr.style.background = color;
+  hdr.textContent = dept;
+  col.appendChild(hdr);
+
+  persons.forEach(p => col.appendChild(buildPersonChip(p, dept)));
+  return col;
 }
 
 function buildPersonChip(person, currentDept) {
@@ -1400,6 +1438,23 @@ function openPersonPopover(person, anchorEl, event) {
     item.appendChild(dot);
     item.appendChild(document.createTextNode(dept));
     item.onclick = () => { assignPerson(person, dept); closePopover(); };
+    pop.appendChild(item);
+  });
+
+  // Trennlinie + Sonder-Kategorien (Management, Extern)
+  const sep2 = document.createElement("div");
+  sep2.className = "person-popover-sep";
+  pop.appendChild(sep2);
+
+  SPECIAL_DEPTS.forEach(sd => {
+    const item = document.createElement("div");
+    item.className = "person-popover-item" + (sd.key === currentDept ? " selected" : "");
+    item.title = sd.title;
+    const dot = document.createElement("span");
+    dot.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;background:${sd.color};flex-shrink:0`;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(sd.label));
+    item.onclick = () => { assignPerson(person, sd.key); closePopover(); };
     pop.appendChild(item);
   });
 
