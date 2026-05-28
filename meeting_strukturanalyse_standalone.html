@@ -382,23 +382,35 @@ function parseData(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) throw new Error("Zu wenig Zeilen – mindestens Header + 1 Datensatz erwartet.");
 
-  // Header-Zeile finden – beim ⌘A+⌘C aus Confluence landet der Seitenname
-  // in den ersten Zeilen, bevor die eigentliche Tabelle beginnt.
-  // Wir scannen die ersten 30 Zeilen und nehmen die, die Tabellen-Schlüsselwörter enthält.
-  let headerLineIdx = 0;
-  for (let i = 0; i < Math.min(lines.length, 30); i++) {
-    const l = lines[i].toLowerCase();
+  // Header-Zeile finden – beim ⌘A+⌘C aus Confluence landen Seitenname, Navigation
+  // und Breadcrumbs in den ersten Zeilen, BEVOR die eigentliche Tabelle beginnt.
+  // Wichtig: Navigationszeilen können ebenfalls "Abt." und "Meeting" enthalten (z.B.
+  // "Abt.übergreifende Meeting-Dokumentation") – daher MUSS die Zeile auch wirklich
+  // ≥5 Spalten haben (col count), sonst wird sie als falsch-positiver Header gezählt.
+  let headerLineIdx = -1;
+  for (let i = 0; i < Math.min(lines.length, 100); i++) {
+    const l    = lines[i].toLowerCase();
+    const cols = lines[i].split(sep);
+    const hasEnoughCols = cols.length >= 5;
     // Erkenne Header-Zeile: enthält Abteilungs-Begriff UND Meeting/Rhythmus/Teilnehmer-Begriff
     const hasAbt  = l.includes("abteilung") || l.includes("abt.");
     const hasMtg  = l.includes("meeting") || l.includes("rhythmus") || l.includes("teilnehmer");
     // Alternativ: Zeile hat ≥ 5 Spalten und enthält "status" (robuster Fallback)
-    const cols    = lines[i].split(sep);
-    const hasMany = cols.length >= 5 && l.includes("status");
-    if ((hasAbt && hasMtg) || hasMany) {
+    const hasMany = hasEnoughCols && l.includes("status");
+    // hasAbt && hasMtg muss AUCH hasEnoughCols erfüllen – sonst fangen wir
+    // Navigations-/Breadcrumb-Zeilen ab, die zufällig beide Keywords enthalten.
+    if ((hasAbt && hasMtg && hasEnoughCols) || hasMany) {
       headerLineIdx = i;
       break;
     }
   }
+  // Kein Header gefunden → erstes Zeile mit ≥5 Spalten nehmen
+  if (headerLineIdx === -1) {
+    for (let i = 0; i < Math.min(lines.length, 100); i++) {
+      if (lines[i].split(sep).length >= 5) { headerLineIdx = i; break; }
+    }
+  }
+  if (headerLineIdx === -1) headerLineIdx = 0;
   const headerRaw = lines[headerLineIdx].split(sep).map(h => h.trim().toLowerCase());
 
   // Column index mapping (case-insensitive, flexible)
