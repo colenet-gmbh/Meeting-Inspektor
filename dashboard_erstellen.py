@@ -30,8 +30,8 @@ ABT_FARBEN = {
     # Override Abteilungsfarben; leer = automatisch aus der Palette vergeben
 }
 RHY_FARBEN = {
-    "täglich":"#dc2626","wöchentlich":"#2563eb","dreiwöchentlich":"#0891b2",
-    "zweiwöchentlich":"#16a34a","monatlich":"#f59e0b","quartalsweise":"#7c3aed","variabel":"#9ca3af",
+    "täglich":"#dc2626","wöchentlich":"#59B2A5","dreiwöchentlich":"#3a8fbf",
+    "zweiwöchentlich":"#7c9e44","monatlich":"#f59e0b","quartalsweise":"#7c6bab","variabel":"#9ca3af",
 }
 FREQ_W = {"täglich":5,"wöchentlich":4,"dreiwöchentlich":3,
           "zweiwöchentlich":2,"monatlich":1,"quartalsweise":0.5,"variabel":0.5}
@@ -41,8 +41,8 @@ with open(INPUT, encoding="utf-8") as f:
     meetings = json.load(f)
 aktive = [m for m in meetings if m["status"] == "Aktiv"]
 
-_COLOR_PALETTE = ["#2563eb","#f59e0b","#16a34a","#dc2626","#7c3aed",
-                  "#0891b2","#d97706","#65a30d","#db2777","#ea580c"]
+_COLOR_PALETTE = ["#59B2A5","#e57f5a","#7c9e44","#c25050","#7c6bab",
+                  "#3a8fbf","#d4a843","#46a085","#c2607a","#7a8ea3"]
 
 if not PERSON_ABT:
     _votes: dict = defaultdict(Counter)
@@ -60,21 +60,25 @@ if not ABT_FARBEN:
 def fig_div(fig):
     # include_plotlyjs=False → Plotly wird einmal global eingebunden (s. HTML-Template)
     return pio.to_html(fig, full_html=False, include_plotlyjs=False,
-                       config={"responsive":True,"displayModeBar":True})
+                       config={"responsive":True,"displayModeBar":False})
 
 def fig_div_net(fig):
     # Wie fig_div, aber doubleClick deaktiviert → eigene Doppelklick-Logik im JS
     return pio.to_html(fig, full_html=False, include_plotlyjs=False,
-                       config={"responsive":True,"displayModeBar":True,"doubleClick":False})
+                       config={"responsive":True,"displayModeBar":False,"doubleClick":False})
 
 # ── VIEW 1: Netzwerk ─────────────────────────────────────────────────────────
 def build_network():
     G = nx.Graph()
     for m in aktive:
+        if m.get("ist_platzhalter"):
+            continue          # Platzhalter-Meetings: generische Knoten nicht ins Netzwerk
         for t in m["teilnehmer"]:
             if t in PERSON_ABT:
                 G.add_node(t)
     for m in aktive:
+        if m.get("ist_platzhalter"):
+            continue
         knoten = [t for t in m["teilnehmer"] if t in PERSON_ABT]
         w = FREQ_W.get(m["rhythmus_klasse"], 0.5)
         for i in range(len(knoten)):
@@ -221,17 +225,16 @@ def build_kalender():
         yaxis=dict(title="Rhythmus",categoryorder="array",categoryarray=rhy_o,
                    showgrid=True,gridcolor="#f3f4f6"),
         plot_bgcolor="white",paper_bgcolor="white",
-        height=460,margin=dict(l=150,r=20,t=60,b=80),
-        annotations=[dict(text="Bubble-Größe = Anzahl Meetings · Hover für Details",
-            xref="paper",yref="paper",x=0,y=-0.16,showarrow=False,
-            font=dict(size=10,color="#9ca3af"))],
+        height=460,margin=dict(l=150,r=20,t=60,b=40),
     )
     return fig
 
 # ── VIEW 3: Überschneidungen ─────────────────────────────────────────────────
 def build_overlap():
     ml = [m for m in aktive if len(m["teilnehmer"])>=2]
-    namen = [m["name"] for m in ml]
+    kurz = lambda n: n[:22] + "…" if len(n) > 22 else n
+    namen      = [m["name"] for m in ml]
+    namen_kurz = [kurz(m["name"]) for m in ml]
     sets  = [set(m["teilnehmer"]) for m in ml]
     n = len(ml)
     matrix, hover = [],[]
@@ -247,7 +250,7 @@ def build_overlap():
                       f"Ähnlichkeit: {v:.0%}<br>Gemeinsam: {', '.join(sorted(gem)) or '–'}")
         matrix.append(mr); hover.append(hr)
     fig = go.Figure(go.Heatmap(
-        z=matrix,x=namen,y=namen,
+        z=matrix,x=namen_kurz,y=namen_kurz,
         text=[[f"{v:.0%}" if v>0 else "" for v in r] for r in matrix],
         texttemplate="%{text}",textfont=dict(size=8),
         colorscale="RdYlGn_r",zmin=0,zmax=1,
@@ -257,12 +260,10 @@ def build_overlap():
     fig.update_layout(
         title=dict(text="Teilnehmer-Überschneidung – Welche Meetings sind ähnlich?",
                    font=dict(size=16,family="Inter")),
-        height=700,margin=dict(l=210,r=100,t=60,b=210),
+        height=max(520, n * 22),
+        margin=dict(l=210,r=100,t=60,b=180),
         xaxis=dict(tickangle=-45,tickfont=dict(size=9)),
         yaxis=dict(tickfont=dict(size=9)),
-        annotations=[dict(text="Rot = hohe Überschneidung (potenzielle Redundanz) · Hover für Details",
-            xref="paper",yref="paper",x=0,y=-0.3,showarrow=False,
-            font=dict(size=10,color="#9ca3af"))],
     )
     return fig
 
@@ -386,77 +387,21 @@ def build_tabelle_html():
     </table>
     </div>"""
 
-# ── VIEW 7: Findings / Auffälligkeiten ───────────────────────────────────────
+# ── VIEW 7: KI Analyse ───────────────────────────────────────────────────────
 def build_findings_html():
-    findings = [
-        # (kategorie, emoji, titel, beschreibung)
-        ("redundanz","🔴","PC Leitungsmeeting ↔ 3M (Monthly Management Meeting)",
-         "Fast identische Teilnehmer: Jco, Ktz, Beb, TOK, MiG, Kip, Urk. Das Leitungsmeeting läuft wöchentlich, das 3M monatlich – mit sehr ähnlichem Reporting-Fokus. Ist das monatliche Meeting eine eigenständige Eskalationsebene oder ein Duplikat?"),
-        ("redundanz","🔴","Reklamationsmeeting ↔ Reklamation",
-         "Zwei Meetings mit sehr ähnlichem Namen unter PCC. Das Reklamationsmeeting ist wöchentlich (operativ), die Reklamation ist quartalsweise (statistisch/strategisch). Abgrenzung ist in der Quelltabelle nicht klar dokumentiert."),
-        ("redundanz","🔴","JF Beschaffung ↔ JF Enasys",
-         "Beide wöchentlich, beide mit Ipa und Beb, beide thematisch um Beschaffung/Vorkomponenten. JF Beschaffung fokussiert auf strategische Beschaffung, JF Enasys auf Enasys-spezifische Themen. Könnten sie kombiniert oder gestaffelt werden?"),
-        ("last","⚠️","Kip (PCT) – höchste Meeting-Last im Netzwerk",
-         "Kip ist in ≥12 aktiven Meetings involviert, davon verantwortet er 6 direkt. Täglich, wöchentlich, zweiwöchentlich. Ist diese Meeting-Dichte für eine Führungskraft langfristig nachhaltig?"),
-        ("last","⚠️","Beb (PCO) – 4 individuelle JFs + Teammeeting",
-         "Beb führt wöchentliche Einzel-JFs mit Ipa, Fln und Jco (jeweils getrennt), plus das PCO Teammeeting. Bietet das Teammeeting noch eigenständigen Mehrwert, wenn alle 1:1-Themen schon abgedeckt sind?"),
-        ("last","⚠️","TOK (PCC) – 7 Meetings, davon 2 täglich",
-         "TOK verantwortet PCC-Update (täglich) und hat 1:1 MA Gespräche (wöchentlich, Platzhalter für alle Einzelgespräche mit dem Team). Dazu Teilnahme am Leitungsmeeting, 3M und wöchentlichem CCU2 UL Meeting."),
-        ("luecke","🕳️","Keine regelmäßige Schiene PCC ↔ PCS dokumentiert",
-         "Customer (PCC) und Sales (PCS) haben kein gemeinsames regelmäßiges Meeting. Bei Reklamationen, Kundenanfragen oder Eskalationen ist unklar, wie Informationen zwischen diesen Abteilungen fließen. Informell geregelt?"),
-        ("luecke","🕳️","Keine regelmäßige Schiene PCO ↔ PCS dokumentiert",
-         "Einkauf/Operations (PCO) und Sales (PCS) sind im Netzwerk nicht direkt verbunden. Bei kundenseitigen Bedarfen, Lieferzeiten oder Beschaffungsfragen wäre eine direkte Schiene relevant."),
-        ("luecke","🕳️","Kein übergreifendes Führungskräfte-Forum auf Teamlead-Ebene",
-         "Unterhalb des Leitungsmeetings (GF-Ebene) gibt es kein dokumentiertes Meeting, in dem die Teamleads abteilungsübergreifend koordinieren. Beb, TOK, Urk, Kip treffen sich nur im Leitungsmeeting gemeinsam."),
-        ("klaerung","❓","'Regeltermin Turn – PQR' doppelt in der Quelltabelle",
-         "Das Meeting erschien in Zeile 4 (mit vollständigen Daten) und Zeile 7 (unvollständig, ohne Teilnehmer und Zweck). Das zweite Vorkommen wurde bereinigt. Handelt es sich um zwei verschiedene Meeting-Instanzen oder ein Duplikat?"),
-        ("klaerung","❓","PSG Sitzung – wer sind 'Projektverantwortliche' konkret?",
-         "Als Teilnehmer steht nur 'Projektverantwortliche'. Für eine vollständige Analyse des Informationsflusses: Welche Personen bzw. Rollen sind regelmäßig dabei? Alle POs (Kip, Krö, Kis)?"),
-        ("klaerung","❓","JF Kunden – wer ist 'Kundenbetreuer' konkret?",
-         "Verantwortlich = 'Kundenbetreuer'. Ist das eine Rolle, die von Urk oder anderen PCS-Mitgliedern je nach Kunde übernommen wird? Für Netzwerk-Analyse relevant."),
-        ("klaerung","❓","'PCS/ACF Sprintreview' – Name irreführend",
-         "Laut Klärung ist das ein Produkt-Review innerhalb PCT AC. Verantwortlich ist Kip, durchgeführt von Kis. Der Name suggeriert PCS-Beteiligung, tatsächlich ist es ein PCT-internes Meeting. Sollte der Name in der Quelltabelle angepasst werden?"),
-        ("luecke","🕳️","Ktz (PCP Produktmanagement) – keine eigenen Meetings dokumentiert",
-         "Ktz ist Führungskraft von PCP Produktmanagement (mit Lav und Rls). Er erscheint nur als Teilnehmer in PC-Leitungsmeetings, hat aber keine eigenen Meetings verantwortet – weder 1:1s mit seinem Team noch ein PCP-Teammeeting. Entweder nicht erfasst oder tatsächlich nicht vorhanden. Klärung empfohlen."),
-        ("datenqualitaet","📝","11 Meetings ohne Informationsfluss-Dokumentation",
-         "Für 11 aktive Meetings ist nicht dokumentiert, welche Informationen hineinfließen und welche Entscheidungen/Outputs herauskommen. Empfehlung: Im Rahmen der Meeting-Überprüfung nachpflegen – der Informationsfluss ist entscheidend für die Qualitätsbeurteilung."),
-        ("datenqualitaet","📝","Asymmetrie in der Dokumentation von Einzelgesprächen",
-         "Urk und Beb listen ihre 1:1-Gespräche namentlich auf (pro Person ein eigenes Meeting). TOK verwendet einen gemeinsamen Platzhalter. Das macht den Vergleich schwierig. Empfehlung: Einheitlichen Standard festlegen."),
-        ("datenqualitaet","📝","Uneinheitliche Terminologie: '1:1' vs. 'Jour Fixe (JF)'",
-         "Bilateral-Meetings zwischen zwei Personen werden in der Tabelle unterschiedlich bezeichnet: Urk nennt sie '1:1' (Einzelgespräch), Beb nennt identische Formate 'JF' (Jour Fixe). Funktional sind beide dasselbe: ein regelmäßiges bilaterales Meeting. Die unterschiedliche Benennung erschwert systemische Auswertung und Kategorisierung. Empfehlung: Gemeinsame Nomenklatur festlegen."),
-        ("datenqualitaet","📝","Abteilung 'PCS/ACF Sprintreview' weist auf PCT hin",
-         "Meeting ist unter PCT geführt, Name enthält PCS. Im Netzwerk wird dieses Meeting korrekt bei PCT verortet, aber der Name könnte zu Verwechslungen führen."),
-    ]
-
-    kat_meta = {
-        "redundanz":      ("Mögliche Redundanzen",    "#dc2626","#fef2f2","#fca5a5"),
-        "last":           ("Hohe Meeting-Last",        "#d97706","#fffbeb","#fcd34d"),
-        "luecke":         ("Kommunikationslücken",     "#7c3aed","#f5f3ff","#c4b5fd"),
-        "klaerung":       ("Klärungsbedarf",           "#0369a1","#eff6ff","#93c5fd"),
-        "datenqualitaet": ("Datenqualität",            "#374151","#f9fafb","#d1d5db"),
-    }
-
-    html = ""
-    for kat, (titel, col, bg, border) in kat_meta.items():
-        items = [f for f in findings if f[0]==kat]
-        html += f"""<div class="finding-category">
-      <h3 style="color:{col};border-left:4px solid {col};padding-left:10px">{titel} <span class="finding-count">{len(items)}</span></h3>"""
-        for i, (_, emoji, heading, desc) in enumerate(items):
-            fid = f"{kat}-{i}"
-            html += f"""<div class="finding-card" id="card-{fid}" style="border-left:3px solid {border};background:{bg}">
-        <div class="finding-header" onclick="toggleFinding('{fid}')">
-          <span class="finding-emoji">{emoji}</span>
-          <span class="finding-title">{heading}</span>
-          <span class="finding-arrow" id="arrow-{fid}">▸</span>
-        </div>
-        <div class="finding-body" id="body-{fid}">
-          <p>{desc}</p>
-        </div>
-      </div>"""
-        html += "</div>"
-
-    summary = f"<div class='findings-summary'>Gesamt: <b>{len(findings)} Auffälligkeiten</b> in {len(kat_meta)} Kategorien · Klicke auf eine Karte zum Aufklappen</div>"
-    return summary + html
+    return """
+    <div class="findings-placeholder">
+      <div class="findings-placeholder-icon">🤖</div>
+      <h2>KI-Analyse</h2>
+      <p>Für diese Organisation wurden noch keine KI-Analysen erstellt.</p>
+      <p class="findings-placeholder-sub">
+        Dieser Bereich ist für kommentierte Beobachtungen gedacht – z.&thinsp;B. erkannte
+        Redundanzen, hohe Meeting-Last einzelner Personen, Kommunikationslücken zwischen
+        Abteilungen oder Klärungsbedarfe aus der Datenpflege.<br><br>
+        Analysen können hier als aufklappbare Karten ergänzt werden und dienen als
+        Gesprächsgrundlage im Management-Review.
+      </p>
+    </div>"""
 
 # ── Alle Charts rendern ──────────────────────────────────────────────────────
 print("🔨 Erzeuge Charts…")
@@ -482,6 +427,10 @@ warn_items = []
 if n_platzh: warn_items.append(f"<b>{n_platzh} Meetings</b> mit unvollständigen Teilnehmer-Angaben (Platzhalter ⚠)")
 if n_ohne_info: warn_items.append(f"<b>{n_ohne_info} Meetings</b> ohne Informationsfluss-Dokumentation")
 warn_html = "".join(f"<li>{w}</li>" for w in warn_items)
+warn_count = len(warn_items)
+
+platz_class    = "stat stat-warn" if n_platzh    > 0 else "stat"
+ohne_info_class = "stat stat-warn" if n_ohne_info > 0 else "stat"
 
 # ── Plotly.js einmalig inline extrahieren (offline-fähig, ~3 MB) ─────────────
 import re as _re
@@ -501,40 +450,50 @@ html = f"""<!DOCTYPE html>
 <title>Meeting Strukturanalyse</title>
 <!-- Google Fonts: wird nur mit Internet geladen; Fallback: system-ui -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- Plotly inline eingebettet → Dashboard funktioniert vollständig offline -->
 {_plotly_js_inline}
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;font-size:14px}}
+body{{font-family:"DM Sans",system-ui,sans-serif;background:#f8faf9;color:#1a2e2c;font-size:14px}}
 
 /* Header */
-.header{{background:linear-gradient(135deg,#1e40af 0%,#2563eb 60%,#0891b2 100%);
-  color:white;padding:22px 36px 20px}}
-.header h1{{font-size:1.45rem;font-weight:700;letter-spacing:-0.3px}}
-.header p{{opacity:.8;font-size:.82rem;margin-top:3px}}
+.header{{background:#59B2A5;color:white;padding:22px 36px 20px;
+  position:relative;overflow:hidden}}
+.header::before{{content:"";position:absolute;width:220px;height:220px;border-radius:50%;
+  background:rgba(255,255,255,0.08);top:-70px;right:40px}}
+.header::after{{content:"";position:absolute;width:160px;height:160px;border-radius:50%;
+  background:rgba(255,255,255,0.05);bottom:-50px;right:110px}}
+.header h1{{font-size:1.45rem;font-weight:600;letter-spacing:-0.3px;position:relative}}
+.header p{{opacity:.8;font-size:.82rem;margin-top:3px;position:relative}}
 
 /* Stats */
 .stats{{display:flex;gap:12px;padding:16px 36px;flex-wrap:wrap}}
 .stat{{background:white;border-radius:10px;padding:14px 20px;flex:1;min-width:120px;
-  text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:1px solid #f1f5f9}}
-.stat .val{{font-size:1.9rem;font-weight:700;color:#2563eb;line-height:1}}
-.stat .lbl{{font-size:.75rem;color:#64748b;margin-top:3px}}
+  text-align:center;box-shadow:0 1px 4px rgba(89,178,165,0.08);border:1px solid #f1f5f9}}
+.stat .val{{font-size:1.9rem;font-weight:700;color:#59B2A5;line-height:1;
+  font-family:"DM Mono",monospace}}
+.stat .lbl{{font-size:.75rem;color:#4a6b67;margin-top:3px}}
+.stat-warn{{border-color:#fcd34d;background:#fffbeb}}
+.stat-warn .val{{color:#b83232}}
 
 /* Warnungen */
 .warnings{{margin:0 36px 12px;background:#fffbeb;border:1px solid #fcd34d;
-  border-left:4px solid #f59e0b;border-radius:6px;padding:10px 14px;font-size:.82rem}}
-.warnings ul{{padding-left:16px}}
+  border-left:4px solid #f59e0b;border-radius:6px;padding:8px 14px;font-size:.82rem}}
+.warn-toggle{{background:none;border:none;cursor:pointer;font-family:inherit;
+  font-size:.82rem;font-weight:600;color:#92400e;padding:2px 0;display:block;width:100%}}
+.warn-toggle:hover{{color:#78350f}}
+.warnings ul{{padding-left:16px;margin-top:6px}}
 .warnings li{{margin-bottom:2px}}
 
 /* Tabs */
-.tab-bar{{display:flex;gap:2px;padding:0 36px;background:#f8fafc;
+.tab-bar{{display:flex;gap:2px;padding:0 36px;background:#f8faf9;
   border-bottom:2px solid #e2e8f0;position:sticky;top:0;z-index:100}}
 .tab-btn{{padding:10px 16px;border:none;background:none;cursor:pointer;
-  font-family:inherit;font-size:.83rem;font-weight:500;color:#64748b;
+  font-family:inherit;font-size:.83rem;font-weight:500;color:#4a6b67;
   border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}}
-.tab-btn:hover{{color:#2563eb}}
-.tab-btn.active{{color:#2563eb;border-bottom-color:#2563eb}}
+.tab-btn:hover{{color:#59B2A5}}
+.tab-btn.active{{color:#59B2A5;border-bottom-color:#59B2A5}}
 
 /* Panel */
 .panel{{display:none;padding:20px 36px 30px}}
@@ -547,11 +506,11 @@ body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;
 .table-toolbar{{display:flex;align-items:center;gap:12px;margin-bottom:12px}}
 #table-search{{flex:1;max-width:380px;padding:8px 12px;border:1px solid #e2e8f0;
   border-radius:8px;font-family:inherit;font-size:.85rem;outline:none}}
-#table-search:focus{{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}}
+#table-search:focus{{border-color:#59B2A5;box-shadow:0 0 0 3px rgba(89,178,165,0.18)}}
 .table-meta{{font-size:.8rem;color:#94a3b8}}
 .table-wrap{{overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0}}
 #meeting-table{{width:100%;border-collapse:collapse;font-size:.82rem}}
-#meeting-table thead th{{background:#1e293b;color:white;padding:10px 12px;
+#meeting-table thead th{{background:#246b61;color:white;padding:10px 12px;
   text-align:left;font-weight:600;white-space:nowrap;position:sticky;top:0}}
 #meeting-table tbody tr{{border-bottom:1px solid #f1f5f9;transition:background .1s}}
 #meeting-table tbody tr:hover{{background:#f8fafc}}
@@ -601,9 +560,16 @@ body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;
 .ol-item{{display:flex;align-items:flex-start;gap:10px}}
 .ol-dot{{width:14px;height:14px;border-radius:3px;flex-shrink:0;margin-top:2px}}
 
+/* KI Analyse Placeholder */
+.findings-placeholder{{text-align:center;padding:60px 40px;color:#4a6b67}}
+.findings-placeholder-icon{{font-size:3rem;margin-bottom:16px}}
+.findings-placeholder h2{{font-size:1.2rem;font-weight:600;margin-bottom:10px;color:#1a2e2c}}
+.findings-placeholder p{{font-size:.88rem;color:#4a6b67;max-width:520px;
+  margin:0 auto 8px;line-height:1.65}}
+.findings-placeholder-sub{{color:#7a9e9a !important;font-size:.83rem !important}}
 
 /* Footer */
-.footer{{text-align:center;padding:24px;font-size:.74rem;color:#94a3b8;border-top:1px solid #f1f5f9}}
+.footer{{text-align:center;padding:16px;font-size:.74rem;color:#7a9e9a;border-top:1px solid #f1f5f9}}
 </style>
 </head>
 <body>
@@ -615,13 +581,13 @@ body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;
 
 <div class="stats">
   <div class="stat"><div class="val">{n_aktiv}</div><div class="lbl">Aktive Meetings</div></div>
-  <div class="stat"><div class="val">{n_woech}</div><div class="lbl">Wöchentlich</div></div>
+  <div class="{ohne_info_class}"><div class="val">{n_ohne_info}</div><div class="lbl">Ohne Infofluss-Doku</div></div>
   <div class="stat"><div class="val">{n_ug}</div><div class="lbl">Abteilungsübergreifend</div></div>
   <div class="stat"><div class="val">{n_einzel}</div><div class="lbl">Einzelgespräche</div></div>
-  <div class="stat"><div class="val">{n_platzh}</div><div class="lbl">⚠ Platzhalter</div></div>
+  <div class="{platz_class}"><div class="val">{n_platzh}</div><div class="lbl">⚠ Platzhalter</div></div>
 </div>
 
-{"<div class='warnings'><ul>" + warn_html + "</ul></div>" if warn_html else ""}
+{"<div class='warnings'><button class='warn-toggle' onclick='toggleWarning()'>⚠ " + str(warn_count) + (" Hinweis" if warn_count == 1 else " Hinweise") + " ▾</button><ul id='warn-list'>" + warn_html + "</ul></div>" if warn_html else ""}
 
 <div class="tab-bar">
   <button class="tab-btn active" onclick="showTab(0)">🕸 Netzwerk</button>
@@ -665,7 +631,7 @@ body{{font-family:"Inter",system-ui,sans-serif;background:#f8fafc;color:#1e293b;
 </div>
 
 <div class="footer">
-  Erstellt mit Claude Code · {len(meetings)} Meetings
+  {len(meetings)} Meetings · Stand: {datetime.date.today().strftime('%d.%m.%Y')}
 </div>
 
 <script>
@@ -804,6 +770,16 @@ function updateTableCount() {{
     window.addEventListener("load", function() {{ setTimeout(setup, 250); }});
   }}
 }})();
+
+// ── Warning Toggle ────────────────────────────────────────────────────────
+function toggleWarning() {{
+  var list = document.getElementById("warn-list");
+  var btn  = document.querySelector(".warn-toggle");
+  if (!list) return;
+  var open = list.style.display !== "none";
+  list.style.display = open ? "none" : "";
+  if (btn) btn.textContent = btn.textContent.replace(open ? "▾" : "▸", open ? "▸" : "▾");
+}}
 
 // ── Findings-Interaktion ──────────────────────────────────────────────────
 function toggleFinding(id) {{
