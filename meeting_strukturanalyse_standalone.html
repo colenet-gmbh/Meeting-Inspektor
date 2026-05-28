@@ -352,16 +352,23 @@ function normalizeAlias(raw) {
 // CSV / TSV Parsing
 // ══════════════════════════════════════════════════════════════════════════════
 function detectSeparator(text) {
-  // Nicht nur die erste Zeile prüfen – bei Confluence-Paste beginnt der Text
-  // mit Seitenname/Navigation, nicht mit dem Tabellen-Header.
-  // Erste Zeile mit ≥5 Trennzeichen gewinnt.
+  // Confluence-Paste: Vor der Tabelle stehen Seitenname, Navigation und Breadcrumbs.
+  // Diese enthalten oft viele Kommas → Komma darf NICHT gewinnen, nur weil es früher
+  // in der Navigation auftaucht. Tabs sind für Tabellen-Daten zuverlässiger.
+  // Strategie: Tabs zuerst, über mehr Zeilen suchen; Komma nur als letzter Ausweg.
   const lines = text.split("\n");
-  for (const line of lines.slice(0, 30)) {
+  // Tab: Tabellen-Zeilen haben typischerweise ≥5 Tabs – suche in bis zu 100 Zeilen
+  for (const line of lines.slice(0, 100)) {
     if ((line.match(/\t/g) || []).length >= 5) return "\t";
-    if ((line.match(/;/g)  || []).length >= 5) return ";";
-    if ((line.match(/,/g)  || []).length >= 5) return ",";
   }
-  // Fallback auf erste Zeile
+  // Semikolon: CSV-Exporte (Excel/Numbers DE)
+  for (const line of lines.slice(0, 50)) {
+    if ((line.match(/;/g) || []).length >= 5) return ";";
+  }
+  // Komma: nur wenn wirklich keine andere Option
+  for (const line of lines.slice(0, 30)) {
+    if ((line.match(/,/g) || []).length >= 5) return ",";
+  }
   const first = lines[0] || "";
   if (first.includes("\t")) return "\t";
   if (first.includes(";")) return ";";
