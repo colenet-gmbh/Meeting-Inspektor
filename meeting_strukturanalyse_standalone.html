@@ -1305,9 +1305,11 @@ function renderPersonenTab() {
   allDepts.forEach(d => deptPersons[d] = []);
 
   // Personen aus MEETINGS sammeln (unique, geordnet nach Name)
+  // Generische Platzhalter-Namen (Leerzeichen = Beschreibung, keine Abkürzung) herausfiltern
   const allPersons = [...new Set(
     MEETINGS.filter(m => !m.ist_platzhalter)
             .flatMap(m => m.teilnehmer)
+            .filter(p => !p.includes(" "))   // "Jeweilige Ticketowner", "PC-Interessierte" etc.
   )].sort();
 
   allPersons.forEach(p => {
@@ -1346,13 +1348,14 @@ function buildPersonChip(person, currentDept) {
   chip.dataset.person = person;
   if (isAmbiguous(person)) chip.classList.add("ambiguous");
 
-  // FK-Stern
-  const star = document.createElement("span");
-  star.className = "fk-star";
-  star.textContent = fkSet.has(person) ? "★" : "☆";
-  star.title = fkSet.has(person) ? "Führungskraft – klicken zum Entfernen" : "Als Führungskraft markieren";
-  star.onclick = (e) => { e.stopPropagation(); toggleFK(person, star); };
-  chip.appendChild(star);
+  // FK-Stern: nur anzeigen wenn Person tatsächlich FK ist
+  if (fkSet.has(person)) {
+    const star = document.createElement("span");
+    star.className = "fk-star";
+    star.textContent = "★";
+    star.title = "Führungskraft";
+    chip.appendChild(star);
+  }
 
   const label = document.createElement("span");
   label.textContent = person;
@@ -1392,6 +1395,21 @@ function openPersonPopover(person, anchorEl, event) {
     item.onclick = () => { assignPerson(person, dept); closePopover(); };
     pop.appendChild(item);
   });
+
+  // Trennlinie + FK-Toggle
+  const sep = document.createElement("div");
+  sep.className = "person-popover-sep";
+  pop.appendChild(sep);
+
+  const isFk = fkSet.has(person);
+  const fkItem = document.createElement("div");
+  fkItem.className = "person-popover-item";
+  fkItem.style.color = isFk ? "#b83232" : "#4a6b67";
+  fkItem.innerHTML = isFk
+    ? "<span style='font-size:.8rem'>★</span> Führungskraft entfernen"
+    : "<span style='font-size:.8rem'>☆</span> Als Führungskraft markieren";
+  fkItem.onclick = () => { toggleFK(person); closePopover(); renderPersonenTab(); };
+  pop.appendChild(fkItem);
 
   document.body.appendChild(pop);
   _activePopover = pop;
@@ -1434,16 +1452,9 @@ function assignPerson(person, newDept) {
 }
 
 // ── FK-Toggle ─────────────────────────────────────────────────────────────────
-function toggleFK(person, starEl) {
-  if (fkSet.has(person)) {
-    fkSet.delete(person);
-    starEl.textContent = "☆";
-    starEl.title = "Als Führungskraft markieren";
-  } else {
-    fkSet.add(person);
-    starEl.textContent = "★";
-    starEl.title = "Führungskraft – klicken zum Entfernen";
-  }
+function toggleFK(person) {
+  if (fkSet.has(person)) fkSet.delete(person);
+  else                   fkSet.add(person);
 }
 
 // ── Alle Charts neu rendern ───────────────────────────────────────────────────
