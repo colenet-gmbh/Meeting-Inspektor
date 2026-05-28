@@ -126,6 +126,47 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 .ol-item{display:flex;align-items:flex-start;gap:10px}
 .ol-dot{width:14px;height:14px;border-radius:3px;flex-shrink:0;margin-top:2px}
 .footer{text-align:center;padding:16px;font-size:.74rem;color:#7a9e9a;border-top:1px solid #f1f5f9}
+
+/* ── Personen-Tab ───────────────────────────────────────────── */
+#panel-7{padding:24px 36px 100px}
+.personen-grid{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:24px}
+.dept-col{background:white;border-radius:10px;box-shadow:0 2px 8px rgba(89,178,165,.08);
+  padding:14px 16px;min-width:140px;flex:1 1 140px;max-width:220px}
+.dept-col-header{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:white;background:#59B2A5;border-radius:6px;padding:5px 10px;margin-bottom:12px;text-align:center}
+.person-chip{display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:5px;
+  border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:500;color:#1a2e2c;
+  background:#f8faf9;border:1px solid #e2e8f0;transition:background .15s,border-color .15s;
+  position:relative;user-select:none}
+.person-chip:hover{background:#f0faf8;border-color:#59B2A5}
+.person-chip.ambiguous::after{content:"";display:inline-block;width:7px;height:7px;
+  border-radius:50%;background:#f59e0b;margin-left:auto;flex-shrink:0}
+.fk-star{font-size:.85rem;color:#d4a843;cursor:pointer;flex-shrink:0;line-height:1;
+  padding:1px 2px;border-radius:3px;transition:transform .15s}
+.fk-star:hover{transform:scale(1.3)}
+
+/* Popover */
+.person-popover{position:fixed;background:white;border-radius:8px;
+  box-shadow:0 4px 20px rgba(0,0,0,.18);border:1px solid #e2e8f0;
+  z-index:9999;padding:4px 0;min-width:130px}
+.person-popover-item{padding:7px 14px;cursor:pointer;font-size:.82rem;color:#1a2e2c;
+  display:flex;align-items:center;gap:8px;transition:background .1s}
+.person-popover-item:hover{background:#f0faf8;color:#246b61}
+.person-popover-item.selected{font-weight:600;color:#246b61}
+.person-popover-item.selected::before{content:"●";font-size:.5rem;color:#59B2A5}
+.person-popover-sep{height:1px;background:#f1f5f9;margin:4px 0}
+
+/* Aktions-Leiste */
+.personen-actions{position:fixed;bottom:0;left:0;right:0;background:white;
+  border-top:1px solid #e2e8f0;padding:12px 36px;display:flex;gap:12px;
+  align-items:center;z-index:100;box-shadow:0 -2px 12px rgba(89,178,165,.08)}
+.personen-actions .hint-inline{font-size:.78rem;color:#7a9e9a;margin-left:auto}
+
+/* Toast */
+.toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
+  background:#1a2e2c;color:white;padding:8px 18px;border-radius:8px;
+  font-size:.82rem;z-index:10000;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.visible{opacity:1}
 </style>
 </head>
 <body>
@@ -180,6 +221,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <button class="tab-btn" onclick="showTab(4)">Kommunikation</button>
     <button class="tab-btn" onclick="showTab(5)">Alle Meetings</button>
     <button class="tab-btn" onclick="showTab(6)">KI Analyse</button>
+    <button class="tab-btn" onclick="showTab(7)">Personen</button>
   </div>
 
   <div id="panel-0" class="panel active">
@@ -231,6 +273,16 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     </div>
   </div>
 
+  <div id="panel-7" class="panel">
+    <div class="personen-grid" id="personen-grid"></div>
+    <div class="personen-actions" id="personen-actions" style="display:none">
+      <button class="btn-primary" onclick="refreshAllCharts()">Alle Charts aktualisieren</button>
+      <button class="btn-secondary" onclick="exportConfig()">Config als JSON kopieren</button>
+      <span class="hint-inline">Änderungen gelten bis zum Neu-Laden der Seite · JSON oben im HTML einfügen zum Persistieren</span>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
   <div class="footer" id="footer-text">Meeting Strukturanalyse</div>
 </div>
 
@@ -281,11 +333,18 @@ function autoDerivePERSON_ABT(meetings) {
       counts[p][m.abteilung] = (counts[p][m.abteilung] || 0) + 1;
     });
   });
-  const result = {};
+  const map = {}, confidence = {};
   Object.entries(counts).forEach(([p, c]) => {
-    result[p] = Object.entries(c).sort((a,b) => b[1]-a[1])[0][0];
+    const sorted = Object.entries(c).sort((a,b) => b[1]-a[1]);
+    const total  = sorted.reduce((s,[,v]) => s + v, 0);
+    map[p] = sorted[0][0];
+    confidence[p] = {
+      autoDept:     sorted[0][0],
+      score:        sorted[0][1] / total,   // 1.0 = eindeutig, < 0.7 = ambiguous
+      alternatives: sorted                  // [[dept, count], ...]
+    };
   });
-  return result;
+  return { map, confidence };
 }
 
 // Weist Abteilungen Farben zu: bekannte aus ABT_FARBEN, unbekannte aus Palette
@@ -299,6 +358,9 @@ function buildAbtFarben(depts) {
 let effectivePersonAbt = {};
 let effectiveAbtFarben = {};
 let allDepts = [];
+let personConfidence   = {};  // { person: { autoDept, score, alternatives } }
+let sankeyRendered     = false;
+let abtRendered        = false;
 
 // Netzwerk: FK-Set (klickbar im Chart togglebar) + Positions-Cache
 let fkSet    = new Set(FK_LIST);   // wird bei neuem Daten-Load auf FK_LIST zurückgesetzt
@@ -593,26 +655,30 @@ function showDashboard() {
   // Dynamische Konfiguration aus den geladenen Daten ableiten
   allDepts = [...new Set(MEETINGS.map(m => m.abteilung))].filter(Boolean).sort();
   // Auto-Ableitung gewinnt für Personen in den aktuellen Daten;
-  // PERSON_ABT dient als Fallback für Personen die nicht in Meetings vorkommen
-  effectivePersonAbt = { ...PERSON_ABT, ...autoDerivePERSON_ABT(MEETINGS) };
+  // PERSON_ABT dient als Fallback / expliziter Override
+  const derived = autoDerivePERSON_ABT(MEETINGS);
+  personConfidence   = derived.confidence;
+  effectivePersonAbt = { ...derived.map, ...PERSON_ABT }; // PERSON_ABT überschreibt Auto-Werte
   effectiveAbtFarben = buildAbtFarben(allDepts);
 
   // FK-Set und Netzwerk-Cache zurücksetzen
-  fkSet    = new Set(FK_LIST);
-  netCache = null;
+  fkSet         = new Set(FK_LIST);
+  netCache      = null;
+  sankeyRendered = false;
+  abtRendered    = false;
 
   // abteilungsuebergreifend nachträglich korrekt berechnen (parseData läuft vor effectivePersonAbt)
   MEETINGS.forEach(m => {
     const abts = new Set(m.teilnehmer.map(t => effectivePersonAbt[t]).filter(Boolean));
-    if (abts.size > 1) m.abteilungsuebergreifend = true;
+    m.abteilungsuebergreifend = abts.size > 1;
   });
 
   document.getElementById("import-screen").style.display = "none";
   document.getElementById("dashboard").style.display = "block";
   renderStats();
   renderTable();
-  renderNetzwerk();
-  // Other charts rendered lazily on first tab-visit
+  // Personen-Tab zuerst öffnen (Nutzer reviewt Zuordnungen, bevor er Charts sieht)
+  showTab(7);
 }
 
 function resetToImport() {
@@ -628,8 +694,14 @@ function resetToImport() {
   });
   document.getElementById("table-body").innerHTML = "";
   renderedTabs.clear();
-  fkSet    = new Set(FK_LIST);
-  netCache = null;
+  fkSet          = new Set(FK_LIST);
+  netCache       = null;
+  personConfidence = {};
+  sankeyRendered = false;
+  abtRendered    = false;
+  document.getElementById("personen-grid").innerHTML = "";
+  const pa = document.getElementById("personen-actions");
+  if (pa) pa.style.display = "none";
 }
 
 // Track which tabs have been rendered
@@ -698,9 +770,13 @@ function showTab(idx) {
     renderedTabs.add(idx);
     if (idx === 1) renderKalender();
     if (idx === 2) renderOverlap();
-    if (idx === 3) renderAbteilung();
-    if (idx === 4) renderSankey();
+    if (idx === 3) { renderAbteilung(); abtRendered = true; }
+    if (idx === 4) { renderSankey();    sankeyRendered = true; }
+    if (idx === 7) renderPersonenTab();
   }
+  // Personen-Aktions-Leiste nur im Personen-Tab einblenden
+  const pa = document.getElementById("personen-actions");
+  if (pa) pa.style.display = idx === 7 ? "flex" : "none";
 
   requestAnimationFrame(() => {
     setTimeout(() => {
@@ -1213,6 +1289,205 @@ function filterTable() {
 function updateTableCount() {
   const total = document.querySelectorAll("#meeting-table tbody tr").length;
   document.getElementById("table-count").textContent = total + " von " + MEETINGS.length + " Meetings";
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 8: Personen – Abteilungszuordnung & FK-Verwaltung
+// ══════════════════════════════════════════════════════════════════════════════
+
+function renderPersonenTab() {
+  const grid = document.getElementById("personen-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  // Alle Personen nach ihrer zugewiesenen Abteilung gruppieren
+  const deptPersons = {};
+  allDepts.forEach(d => deptPersons[d] = []);
+
+  // Personen aus MEETINGS sammeln (unique, geordnet nach Name)
+  const allPersons = [...new Set(
+    MEETINGS.filter(m => !m.ist_platzhalter)
+            .flatMap(m => m.teilnehmer)
+  )].sort();
+
+  allPersons.forEach(p => {
+    const dept = effectivePersonAbt[p];
+    if (dept && deptPersons[dept] !== undefined) {
+      deptPersons[dept].push(p);
+    } else if (dept) {
+      // Abteilung außerhalb allDepts (seltener Fall)
+      if (!deptPersons[dept]) deptPersons[dept] = [];
+      deptPersons[dept].push(p);
+    }
+  });
+
+  // Eine Spalte pro Abteilung
+  allDepts.forEach(dept => {
+    const col = document.createElement("div");
+    col.className = "dept-col";
+    col.dataset.dept = dept;
+
+    const hdr = document.createElement("div");
+    hdr.className = "dept-col-header";
+    hdr.style.background = effectiveAbtFarben[dept] || "#59B2A5";
+    hdr.textContent = dept;
+    col.appendChild(hdr);
+
+    (deptPersons[dept] || []).forEach(p => {
+      col.appendChild(buildPersonChip(p, dept));
+    });
+    grid.appendChild(col);
+  });
+}
+
+function buildPersonChip(person, currentDept) {
+  const chip = document.createElement("div");
+  chip.className = "person-chip";
+  chip.dataset.person = person;
+  if (isAmbiguous(person)) chip.classList.add("ambiguous");
+
+  // FK-Stern
+  const star = document.createElement("span");
+  star.className = "fk-star";
+  star.textContent = fkSet.has(person) ? "★" : "☆";
+  star.title = fkSet.has(person) ? "Führungskraft – klicken zum Entfernen" : "Als Führungskraft markieren";
+  star.onclick = (e) => { e.stopPropagation(); toggleFK(person, star); };
+  chip.appendChild(star);
+
+  const label = document.createElement("span");
+  label.textContent = person;
+  chip.appendChild(label);
+
+  chip.onclick = (e) => openPersonPopover(person, chip, e);
+  return chip;
+}
+
+function isAmbiguous(person) {
+  const c = personConfidence[person];
+  if (!c) return false;
+  return c.score < 0.70 && c.alternatives.length > 1;
+}
+
+// ── Popover ──────────────────────────────────────────────────────────────────
+let _activePopover = null;
+
+function openPersonPopover(person, anchorEl, event) {
+  event.stopPropagation();
+  closePopover();
+
+  const pop = document.createElement("div");
+  pop.className = "person-popover";
+  pop.id = "_person-pop";
+
+  const currentDept = effectivePersonAbt[person] || "";
+
+  allDepts.forEach(dept => {
+    const item = document.createElement("div");
+    item.className = "person-popover-item" + (dept === currentDept ? " selected" : "");
+    const dot = document.createElement("span");
+    dot.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;
+      background:${effectiveAbtFarben[dept]||"#9ca3af"};flex-shrink:0`;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(dept));
+    item.onclick = () => { assignPerson(person, dept); closePopover(); };
+    pop.appendChild(item);
+  });
+
+  document.body.appendChild(pop);
+  _activePopover = pop;
+
+  // Position relativ zum Chip
+  const rect = anchorEl.getBoundingClientRect();
+  let top  = rect.bottom + 4;
+  let left = rect.left;
+  // Rand-Checks
+  if (left + 150 > window.innerWidth) left = window.innerWidth - 155;
+  if (top + pop.offsetHeight > window.innerHeight) top = rect.top - pop.offsetHeight - 4;
+  pop.style.top  = top + "px";
+  pop.style.left = left + "px";
+
+  // Schließen bei Klick außerhalb
+  setTimeout(() => document.addEventListener("click", closePopover, { once: true }), 0);
+}
+
+function closePopover() {
+  if (_activePopover) { _activePopover.remove(); _activePopover = null; }
+}
+
+// ── Zuordnung ändern ─────────────────────────────────────────────────────────
+function assignPerson(person, newDept) {
+  effectivePersonAbt[person] = newDept;
+
+  // Chip in der alten Spalte entfernen
+  document.querySelectorAll(`.person-chip[data-person="${CSS.escape(person)}"]`).forEach(c => c.remove());
+
+  // Chip in der neuen Spalte einfügen (alphabetisch)
+  const targetCol = document.querySelector(`.dept-col[data-dept="${CSS.escape(newDept)}"]`);
+  if (targetCol) {
+    const newChip = buildPersonChip(person, newDept);
+    // Alphabetisch einsortieren (hinter dem Header)
+    const chips = [...targetCol.querySelectorAll(".person-chip")];
+    const insertBefore = chips.find(c => c.dataset.person > person);
+    if (insertBefore) targetCol.insertBefore(newChip, insertBefore);
+    else              targetCol.appendChild(newChip);
+  }
+}
+
+// ── FK-Toggle ─────────────────────────────────────────────────────────────────
+function toggleFK(person, starEl) {
+  if (fkSet.has(person)) {
+    fkSet.delete(person);
+    starEl.textContent = "☆";
+    starEl.title = "Als Führungskraft markieren";
+  } else {
+    fkSet.add(person);
+    starEl.textContent = "★";
+    starEl.title = "Führungskraft – klicken zum Entfernen";
+  }
+}
+
+// ── Alle Charts neu rendern ───────────────────────────────────────────────────
+function refreshAllCharts() {
+  // abteilungsuebergreifend neu berechnen
+  MEETINGS.forEach(m => {
+    const abts = new Set(m.teilnehmer.map(t => effectivePersonAbt[t]).filter(Boolean));
+    m.abteilungsuebergreifend = abts.size > 1;
+  });
+  netCache = null;
+  renderedTabs.delete(0); // Netzwerk-Cache invalidieren
+  renderNetzwerk();
+  renderedTabs.add(0);
+  if (sankeyRendered)  { renderedTabs.delete(4); renderSankey(); renderedTabs.add(4); }
+  if (abtRendered)     { renderedTabs.delete(3); renderAbteilung(); renderedTabs.add(3); abtRendered = true; }
+  renderStats(); // abteilungsuebergreifend-Zählung aktualisieren
+  renderPersonenTab(); // Dots neu berechnen
+  showToast("Charts aktualisiert");
+}
+
+// ── Config-Export ─────────────────────────────────────────────────────────────
+function exportConfig() {
+  // Nur Abweichungen vom Auto-Wert exportieren
+  const personAbt = {};
+  Object.entries(effectivePersonAbt).forEach(([p, d]) => {
+    if ((personConfidence[p]?.autoDept || PERSON_ABT[p]) !== d) personAbt[p] = d;
+    else if (PERSON_ABT[p] && PERSON_ABT[p] !== d) personAbt[p] = d; // expliziter Override beibehalten
+  });
+  const fkArr = [...fkSet].sort();
+  const js = [
+    "// Oben im HTML in die Konfigurations-Blöcke einfügen:",
+    `const PERSON_ABT = ${JSON.stringify(personAbt, null, 2)};`,
+    `const FK_LIST    = ${JSON.stringify(fkArr)};`,
+  ].join("\n");
+  navigator.clipboard.writeText(js).then(() => showToast("Config kopiert – oben im HTML einfügen"));
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add("visible");
+  setTimeout(() => t.classList.remove("visible"), 2400);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
