@@ -131,7 +131,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 #panel-7{padding:24px 36px 100px}
 .personen-grid{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:24px}
 .dept-col{background:white;border-radius:10px;box-shadow:0 2px 8px rgba(89,178,165,.08);
-  padding:14px 16px;min-width:140px;flex:1 1 140px;max-width:220px}
+  padding:14px 16px;min-width:165px;flex:1 1 165px;max-width:220px}
 .dept-col-header{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
   color:white;background:#59B2A5;border-radius:6px;padding:5px 10px;margin-bottom:12px;text-align:center}
 .person-chip{display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:5px;
@@ -236,11 +236,11 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 
   <div id="panel-0" class="panel active">
     <div class="chart-card" id="chart-netzwerk"></div>
-    <p class="hint" id="hint-netzwerk">Knotengröße = Meeting-Anzahl · Liniendicke = Frequenz · Klick = Verbindungen hervorheben · Doppelklick = FK markieren / entfernen</p>
+    <p class="hint" id="hint-netzwerk">Knotengröße = Meeting-Anzahl · Liniendicke = Frequenz · Farbe = Abteilung · Klick = Verbindungen hervorheben · Doppelklick = FK-Status umschalten</p>
   </div>
   <div id="panel-1" class="panel">
     <div class="chart-card" id="chart-kalender"></div>
-    <p class="hint">Bubble-Größe = Anzahl Meetings an diesem Tag/Rhythmus · Hover für Meeting-Namen</p>
+    <p class="hint">Bubble-Größe = Meeting-Anzahl · Farbe = Abteilung · Hover = Meeting-Namen</p>
   </div>
   <div id="panel-2" class="panel">
     <div class="chart-card" id="chart-overlap"></div>
@@ -248,14 +248,15 @@ textarea#paste-area::placeholder{color:#cbd5e1}
       <span class="ol-item"><span class="ol-dot" style="background:#c25050"></span><b>Hohe Überschneidung (Terrakotta)</b> → ähnliche Teilnehmergruppe → mögliche Redundanz</span>
       <span class="ol-item"><span class="ol-dot" style="background:#c8e6e0"></span><b>Keine Überschneidung (Mint)</b> → verschiedene Teilnehmer. Fehlende Meetings erkennst du besser im Netzwerk-Tab.</span>
     </div>
+    <p class="hint">Zellwert = Jaccard-Index (0 = keine, 1 = identische Teilnehmergruppe) · Hover = Überschneidende Personen</p>
   </div>
   <div id="panel-3" class="panel">
     <div class="chart-card" id="chart-abt"></div>
-    <p class="hint">Gestapelte Balken nach Rhythmus · Hover für Meeting-Namen</p>
+    <p class="hint">Balkenhöhe = Meeting-Anzahl · Farbe = Rhythmus · Hover = Meeting-Namen</p>
   </div>
   <div id="panel-4" class="panel">
     <div class="chart-card" id="chart-sankey"></div>
-    <p class="hint">Flussdicke = gewichtete Meeting-Frequenz zwischen Abteilungen</p>
+    <p class="hint">Flussdicke = gewichtete Meeting-Häufigkeit zwischen Abteilungen · Farbe = Quell-Abteilung · Hover = Details</p>
   </div>
   <div id="panel-5" class="panel">
     <div class="table-toolbar">
@@ -272,7 +273,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
         <tbody id="table-body"></tbody>
       </table>
     </div>
-    <p class="hint">Suche filtert über Meeting-Name, Teilnehmer und Abteilung</p>
+    <p class="hint">Echtzeit-Suche über Meeting-Name, Teilnehmer und Abteilung</p>
   </div>
   <div id="panel-6" class="panel">
     <div class="findings-placeholder">
@@ -284,6 +285,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   </div>
 
   <div id="panel-7" class="panel">
+    <p class="hint" style="margin-bottom:14px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;vertical-align:middle;margin-right:4px"></span>Gelber Punkt = Abteilungszuordnung unsicher (Algorithmus &lt; 70 % sicher) &nbsp;·&nbsp; ★ = Führungskraft &nbsp;·&nbsp; Klick auf Chip = Abteilung oder FK-Status ändern</p>
     <div class="personen-grid" id="personen-grid"></div>
     <div class="personen-actions" id="personen-actions" style="display:none">
       <button class="btn-primary" onclick="refreshAllCharts()">Alle Charts aktualisieren</button>
@@ -306,7 +308,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "29.05.2026 10:10";
+const APP_VERSION = "29.05.2026 10:27";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -339,8 +341,16 @@ const SPECIAL_DEPTS = [
 // Dynamische Konfiguration – wird nach dem Laden der Daten berechnet
 // ══════════════════════════════════════════════════════════════════════════════
 const PALETTE = [
-  "#59B2A5","#e57f5a","#7c9e44","#c25050","#7c6bab",
-  "#3a8fbf","#d4a843","#46a085","#c2607a","#7a8ea3"
+  "#59B2A5",  // teal (Brand)
+  "#e05c2a",  // orange
+  "#3aab5e",  // grün
+  "#c94040",  // rot
+  "#d4a843",  // amber
+  "#2176ae",  // royalblau
+  "#7c9e44",  // olivgrün
+  "#c28040",  // kupfer
+  "#a06090",  // mauve
+  "#2d4f8f",  // navy
 ];
 
 // Leitet Person→Abteilung aus den Daten ab (häufigste Abteilung pro Person)
