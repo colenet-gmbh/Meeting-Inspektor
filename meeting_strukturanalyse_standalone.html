@@ -161,7 +161,8 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 /* Sonder-Spalten im Personen-Tab */
 .personen-grid-sep{width:1px;background:#e2e8f0;margin:0 6px;align-self:stretch;flex-shrink:0}
 .dept-col.special .dept-col-header{background:#6b7280 !important}
-.dept-col.special-mgmt .dept-col-header{background:#7c6bab !important}
+.dept-col.special-stab .dept-col-header{background:#5b8fa8 !important}
+.dept-col.special-gl   .dept-col-header{background:#7c6bab !important}
 .dept-col.special-extern .dept-col-header{background:#6b7280 !important}
 .dept-col.special-kunden .dept-col-header{background:#c2607a !important}
 
@@ -305,7 +306,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "28.05.2026 21:57";
+const APP_VERSION = "29.05.2026 10:10";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -328,7 +329,8 @@ const FREQ_W = {
 
 // Feste Sonder-Kategorien – immer im Personen-Tab sichtbar, nicht aus Daten abgeleitet
 const SPECIAL_DEPTS = [
-  { key: "Management", label: "Management",  title: "Intern – übergeordnet (berichtet an sie)",  cssClass: "special-mgmt",   color: "#7c6bab" },
+  { key: "Stabsfunktion",   label: "Stabsfunktion",   title: "Stab / andere interne Bereiche (Controller, Strategie, Cross-Dept.)", cssClass: "special-stab", color: "#5b8fa8" },
+  { key: "Geschäftsleitung", label: "Geschäftsleitung", title: "C-Level / übergeordnete Führungsebene",                                   cssClass: "special-gl",   color: "#7c6bab" },
   { key: "Extern",     label: "Extern",       title: "Externe Partner / Unternehmen",             cssClass: "special-extern",  color: "#6b7280" },
   { key: "Kunden",     label: "Kunden",       title: "Kunden / Endabnehmer",                      cssClass: "special-kunden",  color: "#c2607a" },
 ];
@@ -1375,7 +1377,7 @@ function renderPersonenTab() {
   sep.className = "personen-grid-sep";
   grid.appendChild(sep);
 
-  // Sonder-Spalten: Management & Extern
+  // Sonder-Spalten: Stabsfunktion, Geschäftsleitung, Extern, Kunden
   SPECIAL_DEPTS.forEach(sd => {
     const col = _buildDeptCol(sd.key, sd.color, deptPersons[sd.key] || [], sd.cssClass);
     col.title = sd.title;
@@ -1454,7 +1456,7 @@ function openPersonPopover(person, anchorEl, event) {
     pop.appendChild(item);
   });
 
-  // Trennlinie + Sonder-Kategorien (Management, Extern)
+  // Trennlinie + Sonder-Kategorien (Stabsfunktion, Geschäftsleitung, Extern, Kunden)
   const sep2 = document.createElement("div");
   sep2.className = "person-popover-sep";
   pop.appendChild(sep2);
