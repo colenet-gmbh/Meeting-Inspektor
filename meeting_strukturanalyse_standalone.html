@@ -240,7 +240,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   </div>
   <div id="panel-1" class="panel">
     <div class="chart-card" id="chart-kalender"></div>
-    <p class="hint">Bubble-Größe = Meeting-Anzahl · Farbe = Abteilung · Hover = Meeting-Namen</p>
+    <p class="hint">Bubble-Größe = Anzahl Meetings · Farbe = Abteilung · Legende rechts · Hover = Meeting-Namen</p>
   </div>
   <div id="panel-2" class="panel">
     <div class="chart-card" id="chart-overlap"></div>
@@ -308,7 +308,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "30.05.2026 10:59";
+const APP_VERSION = "30.05.2026 11:24";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1053,40 +1053,60 @@ function renderKalender() {
   const tageO = ["Mo","Di","Mi","Do","Fr","—"];
   const rhyO  = ["variabel","quartalsweise","monatlich","zweiwöchentlich","dreiwöchentlich","wöchentlich","täglich"];
 
+  // Aggregiere nach (tag, rhythmus, abteilung) – ein Datenpunkt pro Kombination
   const agg = {};
   aktive.forEach(m => {
     const tage = m.wochentage.length ? m.wochentage : ["—"];
+    const abt  = m.abteilung || "–";
     tage.forEach(tag => {
-      const key = tag + "||" + m.rhythmus_klasse;
-      if (!agg[key]) agg[key] = { tag, rhy:m.rhythmus_klasse, meetings:[] };
+      const key = tag + "||" + m.rhythmus_klasse + "||" + abt;
+      if (!agg[key]) agg[key] = { tag, rhy: m.rhythmus_klasse, abt, meetings: [] };
       agg[key].meetings.push(m.name);
     });
   });
 
-  const xs=[],ys=[],szs=[],txts=[],hvrs=[],cols=[];
-  Object.values(agg).forEach(({tag,rhy,meetings}) => {
-    xs.push(tag); ys.push(rhy);
-    szs.push(14 + meetings.length*16);
-    txts.push(String(meetings.length));
-    hvrs.push(`<b>${tag} / ${rhy}</b><br>` + meetings.join("<br>"));
-    cols.push(RHY_FARBEN[rhy] || "#9ca3af");
+  // Einen Plotly-Trace pro Abteilung → automatische Legende
+  const byAbt = {};
+  Object.values(agg).forEach(({tag, rhy, abt, meetings}) => {
+    if (!byAbt[abt]) byAbt[abt] = { xs:[], ys:[], szs:[], txts:[], hvrs:[] };
+    byAbt[abt].xs.push(tag);
+    byAbt[abt].ys.push(rhy);
+    byAbt[abt].szs.push(14 + meetings.length * 16);
+    byAbt[abt].txts.push(String(meetings.length));
+    byAbt[abt].hvrs.push(`<b>${tag} · ${rhy} · ${abt}</b><br>` + meetings.join("<br>"));
   });
 
-  const trace = {
-    x:xs, y:ys, mode:"markers+text", text:txts,
-    textfont:{size:12,color:"white"},
-    marker:{size:szs, color:cols, sizemode:"diameter", line:{width:1,color:"white"}},
-    hovertext:hvrs, hoverinfo:"text", type:"scatter"
-  };
-  const layout = {
-    title:{text:"Meeting-Kalender – Wann findet was statt?",font:{size:16,family:"DM Sans, system-ui, sans-serif"}},
-    font:{family:"DM Sans, system-ui, sans-serif"},
-    xaxis:{title:"Wochentag",categoryorder:"array",categoryarray:tageO,showgrid:true,gridcolor:"#f3f4f6"},
-    yaxis:{title:"Rhythmus",categoryorder:"array",categoryarray:rhyO,showgrid:true,gridcolor:"#f3f4f6"},
-    plot_bgcolor:"white",paper_bgcolor:"white",
-    height:460, margin:{l:150,r:20,t:60,b:40}
-  };
-  Plotly.newPlot("chart-kalender", [trace], layout, {responsive:true, displayModeBar:false});
+  // Abteilungen in fester Reihenfolge (allDepts + Sonder-Kategorien)
+  const abtOrder = [...allDepts, ...SPECIAL_DEPTS.map(s => s.key)].filter(a => byAbt[a]);
+  Object.keys(byAbt).forEach(a => { if (!abtOrder.includes(a)) abtOrder.push(a); });
+
+  const traces = abtOrder.map(abt => {
+    const g = byAbt[abt];
+    return {
+      name: abt, type: "scatter",
+      x: g.xs, y: g.ys,
+      mode: "markers+text",
+      text: g.txts,
+      textfont: { size: 11, color: "white" },
+      marker: {
+        size: g.szs,
+        color: effectiveAbtFarben[abt] || "#9ca3af",
+        sizemode: "diameter",
+        line: { width: 1, color: "rgba(255,255,255,0.6)" }
+      },
+      hovertext: g.hvrs, hoverinfo: "text"
+    };
+  });
+
+  Plotly.newPlot("chart-kalender", traces, {
+    title: { text: "Meeting-Kalender – Wann findet was statt?", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
+    font: { family: "DM Sans, system-ui, sans-serif" },
+    xaxis: { title: "Wochentag", categoryorder: "array", categoryarray: tageO, showgrid: true, gridcolor: "#f3f4f6" },
+    yaxis: { title: "Rhythmus", categoryorder: "array", categoryarray: rhyO, showgrid: true, gridcolor: "#f3f4f6" },
+    legend: { title: { text: "Abteilung" }, orientation: "v", x: 1.02, xanchor: "left" },
+    plot_bgcolor: "white", paper_bgcolor: "white",
+    height: 460, margin: { l: 150, r: 20, t: 60, b: 40 }
+  }, { responsive: true, displayModeBar: false });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1557,6 +1577,8 @@ function refreshAllCharts() {
   });
   netCache = null;
   renderedTabs.delete(0); // Netzwerk wird beim nächsten Tab-Besuch frisch gerendert
+  renderedTabs.delete(1); // Kalender wird beim nächsten Tab-Besuch frisch gerendert
+  renderedTabs.delete(8); // Engpass wird beim nächsten Tab-Besuch frisch gerendert
   if (sankeyRendered)  { renderedTabs.delete(4); renderSankey(); renderedTabs.add(4); }
   if (abtRendered)     { renderedTabs.delete(3); renderAbteilung(); renderedTabs.add(3); abtRendered = true; }
   renderStats(); // abteilungsuebergreifend-Zählung aktualisieren
