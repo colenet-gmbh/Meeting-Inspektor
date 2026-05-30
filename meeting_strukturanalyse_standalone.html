@@ -327,7 +327,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "30.05.2026 14:59";
+const APP_VERSION = "30.05.2026 15:16";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -607,10 +607,11 @@ function parseData(text) {
     // z.B. "PCTAC/DC" als Trennzeile). Diese liefern abteilung≠"" aber name="".
     if (!name) continue;
 
-    // Parse Teilnehmer
+    // Parse Teilnehmer – Trennzeichen: Komma, Semikolon oder Zeilenumbruch
+    // (Confluence kann Zellen manchmal mit Newline statt Komma exportieren)
     const teilnRaw = get("teiln");
     const teilnehmer = teilnRaw
-      ? teilnRaw.split(/[,;]/).map(t => canonAbbr(normalizeAlias(t.trim()))).filter(Boolean)
+      ? teilnRaw.split(/[,;\n\r]+/).map(t => canonAbbr(normalizeAlias(t.trim()))).filter(Boolean)
       : [];
 
     const rhythmusRaw = get("rhythmus");
@@ -1541,18 +1542,24 @@ function renderPersonenTab() {
   // Generische Beschreibungen herausfiltern: beginnt mit Kleinbuchstabe ("alle MA", "jeweilige…")
   // oder mehr als zwei Wörter oder länger als 30 Zeichen.
   // Leerzeichen IM Namen (z. B. "Jana Müller", "J. M.") sind explizit erlaubt.
-  const allPersons = [...new Set(
+  const _rawCandidates = [...new Set(
     MEETINGS.filter(m => !m.ist_platzhalter)
             .flatMap(m => [...m.teilnehmer, m.verantwortlich].filter(Boolean))
-            .filter(p => {
-              if (!p.includes(" ")) return true;            // Kein Leerzeichen → kein Beschreibungstext
-              const words = p.trim().split(/\s+/);
-              return words.length <= 2                      // max. 2 Wörter
-                  && /^[A-ZÄÖÜ]/.test(words[0])            // erstes Wort beginnt groß → echter Name
-                  && p.length <= 30;                        // max. 30 Zeichen
-            })
   )].sort();
 
+  const _filtered = [];   // für Diagnose: herausgefilterte Einträge
+  const allPersons = _rawCandidates.filter(p => {
+    if (!p.includes(" ")) return true;
+    const words = p.trim().split(/\s+/);
+    const ok = words.length <= 2
+             && /^[A-ZÄÖÜ]/.test(words[0])
+             && p.length <= 30;
+    if (!ok) _filtered.push(p);
+    return ok;
+  });
+
+  // Diagnose-Box: herausgefilterte + dept-lose Personen anzeigen
+  const _noDept = [];
   allPersons.forEach(p => {
     const dept = effectivePersonAbt[p];
     if (dept && deptPersons[dept] !== undefined) {
@@ -1561,6 +1568,8 @@ function renderPersonenTab() {
       // Abteilung außerhalb allDepts/SPECIAL_DEPTS (seltener Fall)
       if (!deptPersons[dept]) deptPersons[dept] = [];
       deptPersons[dept].push(p);
+    } else {
+      _noDept.push(p);   // hat kein Dept-Mapping → unsichtbar
     }
   });
 
@@ -1580,6 +1589,45 @@ function renderPersonenTab() {
     col.title = sd.title;
     grid.appendChild(col);
   });
+
+  // ── Diagnose-Box ─────────────────────────────────────────────────────────
+  // Zeigt, wenn Personen aus den Daten nicht dargestellt werden konnten.
+  // Hilft beim Debuggen von fehlenden Mitarbeitern.
+  let diagBox = document.getElementById("personen-diag");
+  if (!diagBox) {
+    diagBox = document.createElement("div");
+    diagBox.id = "personen-diag";
+    diagBox.style.cssText =
+      "margin:18px 0 0;padding:12px 16px;background:#fff8e1;border:1px solid #d4a843;" +
+      "border-radius:8px;font-size:.82rem;color:#5a4400;line-height:1.7;";
+    grid.parentElement.appendChild(diagBox);
+  }
+
+  const diagLines = [];
+  if (_filtered.length) {
+    diagLines.push(`<b>Herausgefiltert (generische Beschreibungen):</b> ${_filtered.map(p => `„${p}"`).join(", ")}`);
+  }
+  if (_noDept.length) {
+    diagLines.push(`<b>Keine Abteilung erkannt (unsichtbar):</b> ${_noDept.map(p => `„${p}"`).join(", ")}`);
+  }
+
+  if (diagLines.length) {
+    diagBox.style.display = "block";
+    diagBox.innerHTML =
+      `<b>⚠ Diagnose – fehlende Personen</b><br>${diagLines.join("<br>")}` +
+      `<br><span style="color:#7a6000">Tipp: Prüfe in Confluence die genaue Schreibweise im Feld „Personen".</span>`;
+  } else {
+    diagBox.style.display = "none";
+  }
+
+  // Immer ins Browser-Konsole loggen (für tiefere Diagnose)
+  console.group("[Personen-Tab] Diagnose");
+  console.log("Alle Kandidaten aus Daten:", _rawCandidates);
+  console.log("Angezeigt:", allPersons);
+  console.log("Herausgefiltert:", _filtered);
+  console.log("Kein Dept-Mapping:", _noDept);
+  console.log("effectivePersonAbt:", {...effectivePersonAbt});
+  console.groupEnd();
 }
 
 // Hilfsfunktion: baut eine einzelne Dept-Spalte (regulär oder Sonder)
