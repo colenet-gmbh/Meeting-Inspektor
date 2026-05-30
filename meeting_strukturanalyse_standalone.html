@@ -308,7 +308,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "29.05.2026 16:21";
+const APP_VERSION = "30.05.2026 10:59";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -517,7 +517,7 @@ function parseData(text) {
     rhythmus:  findCol(headerRaw, ["rhythmus","frequenz","frequency","cadence","turnus"]),
     infofluss: findCol(headerRaw, ["informations-fluss","informationsfluss","infofluss","information"]),
     status:    findCol(headerRaw, ["status"]),
-    uebergr:   findCol(headerRaw, ["abt.übergreifend","abt.uebergreifend","übergreifend","uebergreifend","cross"]),
+    uebergr:   findCol(headerRaw, ["abteilungsübergreifend","abteilungsuebergreifend","abt.übergreifend","abt.uebergreifend","übergreifend","uebergreifend","cross"]),
     platzh:    findCol(headerRaw, ["platzhalter / in real mehr","platzhalter","placeholder"]),
     learning:  findCol(headerRaw, ["learnings","learning","erkenntnis"]),
   };
@@ -538,7 +538,7 @@ function parseData(text) {
       throw new Error(
         `Spalten konnten nicht zugeordnet werden (gefunden: "${headerRaw.join(" | ")}").\n` +
         `Erwartet werden mind. 5 Spalten in dieser Reihenfolge:\n` +
-        `Abt. · Meeting-Name · Kategorie · Zweck · Kopf · Teilnehmer · Rhythmus · Informations-Fluss · Status · Abt.übergreifend · Platzhalter · Learnings`
+        `Abteilung · Meetingname · Kategorie · Zweck · Verantwortlich · Personen · Rhythmus · Dauer · Informationsfluss · Status · Abteilungsübergreifend · Platzhalter · Learnings`
       );
     }
   }
