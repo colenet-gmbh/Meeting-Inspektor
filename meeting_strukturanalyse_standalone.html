@@ -233,6 +233,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <button class="tab-btn" onclick="showTab(6)">KI Analyse</button>
     <button class="tab-btn" onclick="showTab(7)">Personen</button>
     <button class="tab-btn" onclick="showTab(8)">Engpass</button>
+    <button class="tab-btn" onclick="showTab(9)">Zeitverteilung</button>
   </div>
 
   <div id="panel-0" class="panel active">
@@ -307,6 +308,11 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <p class="hint" id="hint-zeitlast">Balken = geschätzte Stunden/Monat · Blau = als Verantwortliche/r · Grün = als Teilnehmer/in · Basis: Dauer × monatliche Häufigkeit</p>
   </div>
 
+  <div id="panel-9" class="panel">
+    <div class="chart-card" id="chart-treemap"></div>
+    <p class="hint">Fläche = monatliche Personen-Stunden (Dauer × Häufigkeit × Teilnehmerzahl) · Farbe = Kategorie · Klick auf Kategorie = Drill-down zu Einzelmeetings</p>
+  </div>
+
   <div id="toast" class="toast"></div>
   <div class="footer" id="footer-text">Meeting Strukturanalyse</div>
 </div>
@@ -321,7 +327,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "30.05.2026 12:04";
+const APP_VERSION = "30.05.2026 12:28";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -850,6 +856,7 @@ function showTab(idx) {
     if (idx === 4) { renderSankey();    sankeyRendered = true; }
     if (idx === 7) renderPersonenTab();
     if (idx === 8) renderEngpass();
+    if (idx === 9) renderTreemap();
   }
   // Personen-Aktions-Leiste nur im Personen-Tab einblenden
   const pa = document.getElementById("personen-actions");
@@ -1813,6 +1820,101 @@ function renderZeitlast() {
   }, { responsive: true, displayModeBar: false });
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 10: Zeitverteilung – Treemap (A2)
+// ══════════════════════════════════════════════════════════════════════════════
+function renderTreemap() {
+  if (!MEETINGS.length) return;
+
+  const toH = min => Math.round(min / 60 * 10) / 10;
+
+  // Monatliche Personen-Stunden pro Meeting: Dauer × Häufigkeit/Monat × Teilnehmerzahl / 60
+  let missingDauer = 0;
+  const withHours = [];
+  MEETINGS.forEach(m => {
+    if (m.dauer === null) { missingDauer++; return; }
+    const freq   = FREQ_MONTHLY[m.rhythmus_klasse] || 0.5;
+    const nPers  = m.teilnehmer.length || 1;
+    const mH     = toH(m.dauer * freq * nPers);
+    withHours.push({ m, mH });
+  });
+
+  // Noch keine Dauer-Daten → Hinweis
+  if (withHours.length === 0) {
+    document.getElementById("chart-treemap").innerHTML =
+      `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:.9rem">
+        Noch keine Dauer-Angaben in den Daten – Zeitverteilung wird verfügbar,<br>
+        sobald die Spalte „Dauer" in der Confluence-Tabelle befüllt ist.
+      </div>`;
+    return;
+  }
+
+  // Kategorien + Farben
+  const katSet = [...new Set(withHours.map(({m}) => m.kategorie || "Sonstige"))].sort();
+  const katColor = {};
+  katSet.forEach((k, i) => { katColor[k] = PALETTE[i % PALETTE.length]; });
+
+  // Plotly-Treemap-Arrays
+  const labels       = [];
+  const parents      = [];
+  const values       = [];
+  const colors       = [];
+  const customdata   = [];
+  const htmpl        = [];
+
+  // ── Kategorie-Knoten ──────────────────────────────────────────────────────
+  katSet.forEach(kat => {
+    const items = withHours.filter(({m}) => (m.kategorie || "Sonstige") === kat);
+    const total = Math.round(items.reduce((s, {mH}) => s + mH, 0) * 10) / 10;
+    labels.push(kat);
+    parents.push("");
+    values.push(total);                     // branchvalues:"total" → explizite Summe
+    colors.push(katColor[kat]);
+    customdata.push([total, items.length, null, null]);
+    htmpl.push("<b>%{label}</b><br>%{customdata[0]} h/Monat · %{customdata[1]} Meetings<extra></extra>");
+  });
+
+  // ── Meeting-Knoten ────────────────────────────────────────────────────────
+  withHours.forEach(({m, mH}) => {
+    const kat = m.kategorie || "Sonstige";
+    labels.push(m.name);
+    parents.push(kat);
+    values.push(mH);
+    colors.push(katColor[kat]);
+    customdata.push([mH, m.dauer, m.rhythmus_klasse, m.teilnehmer.length]);
+    htmpl.push("<b>%{label}</b><br>%{value} h/Monat<br>Dauer: %{customdata[1]} min · %{customdata[2]} · %{customdata[3]} Pers.<extra></extra>");
+  });
+
+  // Hinweis-Text dynamisch
+  const suffix = missingDauer > 0
+    ? ` (${missingDauer} Meeting${missingDauer > 1 ? "s" : ""} ohne Dauer nicht berücksichtigt)`
+    : "";
+  const hint = document.querySelector("#panel-9 .hint");
+  if (hint) hint.textContent =
+    `Fläche = monatliche Personen-Stunden (Dauer × Häufigkeit × Teilnehmerzahl) · Farbe = Kategorie · Klick auf Kategorie = Drill-down${suffix}`;
+
+  Plotly.newPlot("chart-treemap", [{
+    type:         "treemap",
+    labels,
+    parents,
+    values,
+    branchvalues: "total",
+    marker:       { colors, line: { width: 2, color: "white" } },
+    customdata,
+    hovertemplate: htmpl,
+    texttemplate:  "<b>%{label}</b><br>%{value} h",
+    insidetextfont: { size: 11, family: "DM Sans, system-ui, sans-serif" },
+    pathbar:      { visible: true, thickness: 26 }
+  }], {
+    title:        { text: "Zeitverteilung nach Kategorie (Personen-Stunden/Monat)", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
+    font:         { family: "DM Sans, system-ui, sans-serif" },
+    margin:       { l: 0, r: 0, t: 60, b: 10 },
+    height:       560,
+    plot_bgcolor:  "white",
+    paper_bgcolor: "white"
+  }, { responsive: true, displayModeBar: false });
+}
+
 // ── FK-Toggle ─────────────────────────────────────────────────────────────────
 function toggleFK(person) {
   if (fkSet.has(person)) fkSet.delete(person);
@@ -1831,6 +1933,7 @@ function refreshAllCharts() {
   renderedTabs.delete(0); // Netzwerk wird beim nächsten Tab-Besuch frisch gerendert
   renderedTabs.delete(1); // Kalender wird beim nächsten Tab-Besuch frisch gerendert
   renderedTabs.delete(8); // Engpass wird beim nächsten Tab-Besuch frisch gerendert
+  renderedTabs.delete(9); // Zeitverteilung wird beim nächsten Tab-Besuch frisch gerendert
   if (sankeyRendered)  { renderedTabs.delete(4); renderSankey(); renderedTabs.add(4); }
   if (abtRendered)     { renderedTabs.delete(3); renderAbteilung(); renderedTabs.add(3); abtRendered = true; }
   renderStats(); // abteilungsuebergreifend-Zählung aktualisieren
