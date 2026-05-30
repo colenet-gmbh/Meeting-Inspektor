@@ -232,6 +232,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <button class="tab-btn" onclick="showTab(5)">Alle Meetings</button>
     <button class="tab-btn" onclick="showTab(6)">KI Analyse</button>
     <button class="tab-btn" onclick="showTab(7)">Personen</button>
+    <button class="tab-btn" onclick="showTab(8)">Engpass</button>
   </div>
 
   <div id="panel-0" class="panel active">
@@ -294,6 +295,11 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     </div>
   </div>
 
+  <div id="panel-8" class="panel">
+    <div class="chart-card" id="chart-engpass"></div>
+    <p class="hint">Balken = Anzahl Meetings · Blau = als Verantwortliche/r (Kopf, inkl. Vorbereitung) · Grün = als Teilnehmer/in · Hover = Details · Sortiert nach Gesamtlast</p>
+  </div>
+
   <div id="toast" class="toast"></div>
   <div class="footer" id="footer-text">Meeting Strukturanalyse</div>
 </div>
@@ -308,7 +314,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "29.05.2026 16:21";
+const APP_VERSION = "30.05.2026 10:23";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -818,6 +824,7 @@ function showTab(idx) {
     if (idx === 3) { renderAbteilung(); abtRendered = true; }
     if (idx === 4) { renderSankey();    sankeyRendered = true; }
     if (idx === 7) renderPersonenTab();
+    if (idx === 8) renderEngpass();
   }
   // Personen-Aktions-Leiste nur im Personen-Tab einblenden
   const pa = document.getElementById("personen-actions");
@@ -1541,6 +1548,62 @@ function assignPerson(person, newDept) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 9: Engpass-Karte (D3)
+// ══════════════════════════════════════════════════════════════════════════════
+function renderEngpass() {
+  if (!MEETINGS.length) return;
+
+  // Meetings pro Person zählen: als Verantwortliche/r und als Teilnehmer/in
+  const kopfCount  = {};
+  const teilnCount = {};
+
+  MEETINGS.forEach(m => {
+    const v = m.verantwortlich;
+    if (v) kopfCount[v] = (kopfCount[v] || 0) + 1;
+    m.teilnehmer.forEach(t => {
+      teilnCount[t] = (teilnCount[t] || 0) + 1;
+    });
+  });
+
+  // Alle Personen sammeln, nach Gesamtlast absteigend sortieren
+  const allP = new Set([...Object.keys(kopfCount), ...Object.keys(teilnCount)]);
+  const persons = [...allP].sort((a, b) =>
+    ((kopfCount[b]||0) + (teilnCount[b]||0)) - ((kopfCount[a]||0) + (teilnCount[a]||0))
+  );
+
+  const HEIGHT = Math.max(420, persons.length * 26 + 140);
+
+  Plotly.newPlot("chart-engpass", [
+    {
+      type: "bar", orientation: "h",
+      name: "als Verantwortliche/r (Kopf)",
+      y: persons,
+      x: persons.map(p => kopfCount[p] || 0),
+      marker: { color: "#2176ae" },
+      hovertemplate: "<b>%{y}</b><br>%{x} Meetings als Verantwortliche/r<extra></extra>"
+    },
+    {
+      type: "bar", orientation: "h",
+      name: "als Teilnehmer/in",
+      y: persons,
+      x: persons.map(p => teilnCount[p] || 0),
+      marker: { color: "#59B2A5" },
+      hovertemplate: "<b>%{y}</b><br>%{x} Meetings als Teilnehmer/in<extra></extra>"
+    }
+  ], {
+    barmode: "group",
+    title: { text: "Meeting-Last pro Person", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
+    font: { family: "DM Sans, system-ui, sans-serif" },
+    xaxis: { title: "Anzahl Meetings", showgrid: true, gridcolor: "#f3f4f6", dtick: 1 },
+    yaxis: { autorange: "reversed", automargin: true },
+    legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "right", x: 1 },
+    plot_bgcolor: "white", paper_bgcolor: "white",
+    height: HEIGHT,
+    margin: { l: 10, r: 20, t: 60, b: 60 }
+  }, { responsive: true, displayModeBar: false });
+}
+
 // ── FK-Toggle ─────────────────────────────────────────────────────────────────
 function toggleFK(person) {
   if (fkSet.has(person)) fkSet.delete(person);
@@ -1557,6 +1620,7 @@ function refreshAllCharts() {
   });
   netCache = null;
   renderedTabs.delete(0); // Netzwerk wird beim nächsten Tab-Besuch frisch gerendert
+  renderedTabs.delete(8); // Engpass wird beim nächsten Tab-Besuch frisch gerendert
   if (sankeyRendered)  { renderedTabs.delete(4); renderSankey(); renderedTabs.add(4); }
   if (abtRendered)     { renderedTabs.delete(3); renderAbteilung(); renderedTabs.add(3); abtRendered = true; }
   renderStats(); // abteilungsuebergreifend-Zählung aktualisieren
