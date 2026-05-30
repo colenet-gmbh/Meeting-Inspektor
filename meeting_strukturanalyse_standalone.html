@@ -253,6 +253,8 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   <div id="panel-3" class="panel">
     <div class="chart-card" id="chart-abt"></div>
     <p class="hint">Balkenhöhe = Anzahl distinct Meeting-Formate (nicht frequenzgewichtet) · Farbe = Rhythmus · Hover = Meeting-Namen</p>
+    <div class="chart-card" id="chart-status" style="margin-top:20px"></div>
+    <p class="hint">Anteil je Status-Kategorie pro Abteilung (100 % = alle Meetings der Abteilung) · Hover = absolute Anzahl</p>
   </div>
   <div id="panel-4" class="panel">
     <div class="chart-card" id="chart-sankey"></div>
@@ -308,7 +310,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "29.05.2026 16:21";
+const APP_VERSION = "30.05.2026 10:24";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1180,6 +1182,52 @@ function renderAbteilung() {
     height:440, margin:{l:60,r:20,t:60,b:60}
   };
   Plotly.newPlot("chart-abt", traces, layout, {responsive:true, displayModeBar:false});
+  renderStatusVerteilung();
+}
+
+function renderStatusVerteilung() {
+  if (!MEETINGS.length) return;
+
+  // Alle Meetings (inkl. Geplant) nach Abteilung + Status gruppieren
+  const abtStatusMap = {};
+  MEETINGS.forEach(m => {
+    const abt = (m.abteilung || "Unbekannt").trim();
+    const st  = (m.status   || "Unbekannt").trim();
+    if (!abtStatusMap[abt]) abtStatusMap[abt] = {};
+    abtStatusMap[abt][st] = (abtStatusMap[abt][st] || 0) + 1;
+  });
+
+  const abts = allDepts; // gleiche Reihenfolge wie chart-abt
+  const allSt = [...new Set(MEETINGS.map(m => (m.status || "Unbekannt").trim()))].sort();
+
+  // Aktiv + Geplant zuerst, Rest alphabetisch
+  const priority = ["Aktiv", "Geplant"];
+  const sortedSt = [
+    ...priority.filter(s => allSt.includes(s)),
+    ...allSt.filter(s => !priority.includes(s))
+  ];
+
+  const statusColor = { "Aktiv":"#3aab5e", "Geplant":"#d4a843" };
+
+  const traces = sortedSt.map(st => ({
+    type: "bar", name: st,
+    x: abts,
+    y: abts.map(a => abtStatusMap[a]?.[st] || 0),
+    marker: { color: statusColor[st] || "#9ca3af" },
+    hovertemplate: "<b>%{x}</b><br>" + st + ": %{y} Meetings<extra></extra>"
+  }));
+
+  Plotly.newPlot("chart-status", traces, {
+    barmode: "stack",
+    barnorm: "percent",
+    title: { text: "Status-Verteilung pro Abteilung", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
+    font: { family: "DM Sans, system-ui, sans-serif" },
+    xaxis: { title: "Abteilung" },
+    yaxis: { title: "Anteil (%)", showgrid: true, gridcolor: "#f3f4f6", range: [0, 100] },
+    legend: { title: { text: "Status" } },
+    plot_bgcolor: "white", paper_bgcolor: "white",
+    height: 380, margin: { l: 60, r: 20, t: 60, b: 60 }
+  }, { responsive: true, displayModeBar: false });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
