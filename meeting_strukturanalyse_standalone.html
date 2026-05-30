@@ -334,7 +334,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "30.05.2026 18:10";
+const APP_VERSION = "30.05.2026 18:25";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -2141,12 +2141,12 @@ function renderWirkungsMatrix() {
   ];
 
   Plotly.react(el, traces, {
-    margin: { t: 24, r: 24, b: 56, l: 56 },
+    margin: { t: 64, r: 24, b: 56, l: 56 },
     xaxis: { title: "Zeitaufwand h/Monat", zeroline: false, gridcolor: "#f1f5f9", range: [0, xMax] },
     yaxis: { title: "Wirkung", tickvals: [1,2,3,4], ticktext: ["1","2","3","4"], range: [0.5, 4.5], gridcolor: "#f1f5f9" },
     shapes,
     annotations,
-    legend: { orientation: "h", y: -0.15 },
+    legend: { orientation: "h", y: 1.08, x: 0.5, xanchor: "center" },
     plot_bgcolor: "#fff",
     paper_bgcolor: "#fff",
     font: { family: "Inter, system-ui, sans-serif", size: 12, color: "#374151" },
