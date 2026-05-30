@@ -268,6 +268,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
       <table id="meeting-table">
         <thead><tr>
           <th>Abteilung</th><th>Meeting</th><th>Kategorie</th><th>Rhythmus</th>
+          <th title="Dauer in Minuten">Min.</th>
           <th>Verantwortl.</th><th>Teilnehmer</th><th>Status</th>
           <th title="Abteilungsübergreifend">Übergr.</th><th>Zweck</th><th>Learnings</th>
         </tr></thead>
@@ -521,6 +522,7 @@ function parseData(text) {
     vera:      findCol(headerRaw, ["kopf","verantwortlich","verantwortl","owner","responsible"]),
     teiln:     findCol(headerRaw, ["teilnehmer","participants","personen"]),
     rhythmus:  findCol(headerRaw, ["rhythmus","frequenz","frequency","cadence","turnus"]),
+    dauer:     findCol(headerRaw, ["dauer","dauer (min)","dauer(min)","minuten","duration","min"]),
     infofluss: findCol(headerRaw, ["informations-fluss","informationsfluss","infofluss","information"]),
     status:    findCol(headerRaw, ["status"]),
     uebergr:   findCol(headerRaw, ["abteilungsübergreifend","abteilungsuebergreifend","abt.übergreifend","abt.uebergreifend","übergreifend","uebergreifend","cross"]),
@@ -601,6 +603,10 @@ function parseData(text) {
       abteilungsuebergreifend = abts.size > 1;
     }
 
+    // Dauer – optionale Spalte; Ganzzahl in Minuten, null wenn leer/ungültig
+    const dauerRaw = get("dauer");
+    const dauer = dauerRaw ? (parseInt(dauerRaw.replace(/[^0-9]/g, ""), 10) || null) : null;
+
     // Platzhalter – aus Spalte lesen
     let platzh_val = get("platzh");
     const ist_platzhalter = platzh_val !== ""
@@ -623,6 +629,7 @@ function parseData(text) {
       rhythmus_raw: rhythmusRaw,
       rhythmus_klasse,
       wochentage,
+      dauer,          // Minuten pro Sitzung (null = nicht angegeben)
       infofluss: get("infofluss"),
       status,
       abteilungsuebergreifend,
@@ -1336,6 +1343,7 @@ function renderTable() {
       <td class="meeting-name">${m.name}${platzh}</td>
       <td><span class="kat-pill">${m.kategorie}</span></td>
       <td><span class="rhy-dot" style="background:${RHY_FARBEN[m.rhythmus_klasse]||'#9ca3af'}"></span>${m.rhythmus_klasse}</td>
+      <td style="text-align:right;color:${m.dauer?'inherit':'#c0ccc9'}">${m.dauer ? m.dauer+'′' : '–'}</td>
       <td>${vera}</td>
       <td class="teiln-cell">${teilnStr}</td>
       <td><span class="badge ${statusCls}">${m.status}</span></td>
