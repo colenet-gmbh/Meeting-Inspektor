@@ -228,28 +228,28 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   <div id="warnings-bar"></div>
 
   <div class="tab-bar">
-    <button class="tab-btn active" onclick="showTab(0)">Netzwerk</button>
-    <button class="tab-btn" onclick="showTab(1)">Kalender</button>
-    <button class="tab-btn" onclick="showTab(2)">Überschneidungen</button>
-    <button class="tab-btn" onclick="showTab(3)">Abteilungen</button>
-    <button class="tab-btn" onclick="showTab(4)">Kommunikation</button>
-    <button class="tab-btn" onclick="showTab(5)">Alle Meetings</button>
-    <button class="tab-btn" onclick="showTab(6)">KI Analyse</button>
-    <button class="tab-btn" onclick="showTab(7)">Personen</button>
-    <button class="tab-btn" onclick="showTab(8)">Engpass</button>
-    <button class="tab-btn" onclick="showTab(9)">Zeitverteilung</button>
-    <button class="tab-btn" onclick="showTab(10)">Wirkung</button>
+    <button class="tab-btn active" data-tab="0" onclick="showTab(0)">Personen</button>
+    <button class="tab-btn" data-tab="1" onclick="showTab(1)">Netzwerk</button>
+    <button class="tab-btn" data-tab="2" onclick="showTab(2)">Abteilungen</button>
+    <button class="tab-btn" data-tab="3" onclick="showTab(3)">Kalender</button>
+    <button class="tab-btn" data-tab="4" onclick="showTab(4)">Kommunikation</button>
+    <button class="tab-btn" data-tab="5" onclick="showTab(5)">Überschneidungen</button>
+    <button class="tab-btn" data-tab="6" onclick="showTab(6)">Engpass</button>
+    <button class="tab-btn" data-tab="7" onclick="showTab(7)">Zeitverteilung</button>
+    <button class="tab-btn" data-tab="8" onclick="showTab(8)">Wirkung</button>
+    <button class="tab-btn" data-tab="9" onclick="showTab(9)">Alle Meetings</button>
+    <button class="tab-btn" data-tab="10" onclick="showTab(10)">KI Analyse</button>
   </div>
 
-  <div id="panel-0" class="panel active">
+  <div id="panel-0" class="panel" data-tab="1">
     <div class="chart-card" id="chart-netzwerk"></div>
     <p class="hint" id="hint-netzwerk">Knotengröße = Meeting-Anzahl · Liniendicke = Frequenz · Farbe = Abteilung · Klick = Verbindungen hervorheben · Doppelklick = FK-Status umschalten</p>
   </div>
-  <div id="panel-1" class="panel">
+  <div id="panel-1" class="panel" data-tab="3">
     <div class="chart-card" id="chart-kalender"></div>
     <p class="hint">Bubble-Größe = Anzahl Meetings · Farbe = Abteilung · Legende rechts · Hover = Meeting-Namen</p>
   </div>
-  <div id="panel-2" class="panel">
+  <div id="panel-2" class="panel" data-tab="5">
     <div class="chart-card" id="chart-overlap"></div>
     <div class="overlap-legend">
       <span class="ol-item"><span class="ol-dot" style="background:#c25050"></span><b>Hohe Überschneidung (Terrakotta)</b> → ähnliche Teilnehmergruppe → mögliche Redundanz</span>
@@ -257,7 +257,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     </div>
     <p class="hint">Zellwert = Jaccard-Index (0 = keine, 1 = identische Teilnehmergruppe) · Hover = Überschneidende Personen</p>
   </div>
-  <div id="panel-3" class="panel">
+  <div id="panel-3" class="panel" data-tab="2">
     <div class="toggle-grp">
       <button id="abt-btn-anzahl" class="active" onclick="setAbtMode('anzahl')">Anzahl</button>
       <button id="abt-btn-freq" onclick="setAbtMode('freq')">Freq./Monat</button>
@@ -269,11 +269,11 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <div class="chart-card" id="chart-rhythmus" style="margin-top:20px"></div>
     <p class="hint">Balkenhöhe = Anzahl Meeting-Formate je Rhythmus-Klasse · Farbe = Kategorie · von hochfrequent (links) nach selten (rechts)</p>
   </div>
-  <div id="panel-4" class="panel">
+  <div id="panel-4" class="panel" data-tab="4">
     <div class="chart-card" id="chart-sankey"></div>
     <p class="hint">Flussdicke = gewichtete Meeting-Häufigkeit zwischen Abteilungen · Farbe = Quell-Abteilung · Hover = Details</p>
   </div>
-  <div id="panel-5" class="panel">
+  <div id="panel-5" class="panel" data-tab="9">
     <div class="table-toolbar">
       <input type="text" id="table-search" placeholder="Meeting, Person, Abteilung …" oninput="filterTable()">
       <div class="table-meta" id="table-count"></div>
@@ -292,7 +292,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     </div>
     <p class="hint">Echtzeit-Suche über Meeting-Name, Teilnehmer und Abteilung</p>
   </div>
-  <div id="panel-6" class="panel">
+  <div id="panel-6" class="panel" data-tab="10">
     <div class="findings-placeholder">
       <div class="findings-placeholder-icon">🤖</div>
       <h2>KI-Analyse</h2>
@@ -301,7 +301,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     </div>
   </div>
 
-  <div id="panel-7" class="panel">
+  <div id="panel-7" class="panel active" data-tab="0">
     <p class="hint" style="margin-bottom:14px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;vertical-align:middle;margin-right:4px"></span>Gelber Punkt = Abteilungszuordnung unsicher (Algorithmus &lt; 70 % sicher) &nbsp;·&nbsp; ★ = Führungskraft &nbsp;·&nbsp; Klick auf Chip = Abteilung oder FK-Status ändern</p>
     <div class="personen-grid" id="personen-grid"></div>
     <div class="personen-actions" id="personen-actions" style="display:none">
@@ -311,20 +311,20 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     </div>
   </div>
 
-  <div id="panel-8" class="panel">
+  <div id="panel-8" class="panel" data-tab="6">
     <div class="chart-card" id="chart-engpass"></div>
     <p class="hint">Balken = Anzahl Meetings · Blau = als Verantwortliche/r (Kopf, inkl. Vorbereitung) · Grün = als Teilnehmer/in · Hover = Details · Sortiert nach Gesamtlast</p>
     <div class="chart-card" id="chart-zeitlast" style="margin-top:20px"></div>
     <p class="hint" id="hint-zeitlast">Balken = geschätzte Stunden/Monat · Blau = als Verantwortliche/r · Grün = als Teilnehmer/in · Basis: Dauer × monatliche Häufigkeit</p>
   </div>
 
-  <div id="panel-9" class="panel">
+  <div id="panel-9" class="panel" data-tab="7">
     <div class="chart-card" id="chart-treemap"></div>
     <p class="hint">Fläche = monatliche Personen-Stunden (Dauer × Häufigkeit × Teilnehmerzahl) · Farbe = Kategorie · Klick auf Kategorie = Drill-down zu Einzelmeetings</p>
   </div>
 
-  <div id="panel-10" class="panel">
-    <div class="chart-card" id="chart-wirkung" style="height:520px"></div>
+  <div id="panel-10" class="panel" data-tab="8">
+    <div class="chart-card" id="chart-wirkung" style="height:480px"></div>
     <p class="hint">Nur Meetings mit Dauer- UND Wirkungsangabe · Bubble-Größe = Teilnehmerzahl · Farbe = Kategorie · Hover = Details · X-Trennlinie = Median der Zeitlast</p>
   </div>
 
@@ -342,7 +342,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "31.05.2026 13:55";
+const APP_VERSION = "31.05.2026 14:30";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -783,7 +783,7 @@ function showDashboard() {
   renderStats();
   renderTable();
   // Personen-Tab zuerst öffnen (Nutzer reviewt Zuordnungen, bevor er Charts sieht)
-  showTab(7);
+  showTab(0);
 }
 
 function resetToImport() {
@@ -867,31 +867,30 @@ function toggleWarning() {
 // Tab Navigation
 // ══════════════════════════════════════════════════════════════════════════════
 function showTab(idx) {
-  document.querySelectorAll(".tab-btn").forEach((b,i) => b.classList.toggle("active", i===idx));
-  document.querySelectorAll(".panel").forEach((p,i) => p.classList.toggle("active", i===idx));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", parseInt(b.dataset.tab) === idx));
+  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", parseInt(p.dataset.tab) === idx));
 
-  if (idx === 5) updateTableCount();
+  if (idx === 9) updateTableCount();
 
   if (!renderedTabs.has(idx)) {
     renderedTabs.add(idx);
-    if (idx === 0) renderNetzwerk();
-    if (idx === 1) renderKalender();
-    if (idx === 2) renderOverlap();
-    if (idx === 3) { renderAbteilung(); abtRendered = true; }
+    if (idx === 1) renderNetzwerk();
+    if (idx === 3) renderKalender();
+    if (idx === 5) renderOverlap();
+    if (idx === 2) { renderAbteilung(); abtRendered = true; }
     if (idx === 4) { renderSankey();    sankeyRendered = true; }
-    if (idx === 7) renderPersonenTab();
-    if (idx === 8) renderEngpass();
-    if (idx === 9) renderTreemap();
-    if (idx === 10) renderWirkungsMatrix();
+    if (idx === 0) renderPersonenTab();
+    if (idx === 6) renderEngpass();
+    if (idx === 7) renderTreemap();
+    if (idx === 8) renderWirkungsMatrix();
   }
-  // Personen-Aktions-Leiste nur im Personen-Tab einblenden
   const pa = document.getElementById("personen-actions");
-  if (pa) pa.style.display = idx === 7 ? "flex" : "none";
+  if (pa) pa.style.display = idx === 0 ? "flex" : "none";
 
   requestAnimationFrame(() => {
     setTimeout(() => {
-      const panel = document.getElementById("panel-" + idx);
-      panel.querySelectorAll(".plotly-graph-div").forEach(p => Plotly.Plots.resize(p));
+      const panel = document.querySelector(`.panel[data-tab="${idx}"]`);
+      if (panel) panel.querySelectorAll(".plotly-graph-div").forEach(p => Plotly.Plots.resize(p));
     }, 50);
   });
 }
@@ -907,7 +906,7 @@ window.addEventListener("resize", () => {
 // renderNetzwerk: berechnet d3-force-Positionen (teuer), cached sie, ruft _plotNetzwerk auf.
 // _plotNetzwerk: baut Traces aus dem Cache – wird auch bei FK-Toggle aufgerufen (kein d3 neu).
 function renderNetzwerk() {
-  renderedTabs.add(0);
+  renderedTabs.add(1);
   const aktive = MEETINGS.filter(m => m.status === "Aktiv" && !m.ist_platzhalter);
 
   // Build graph
@@ -1085,7 +1084,7 @@ function _plotNetzwerk(firstRender) {
         if (fkSet.has(person)) fkSet.delete(person);
         else fkSet.add(person);
         saveConfig();
-        renderedTabs.delete(7); // Personen-Tab beim nächsten Besuch neu zeichnen
+        renderedTabs.delete(0); // Personen-Tab beim nächsten Besuch neu zeichnen
         activeNode = null;
         _plotNetzwerk(false);
         applyOps(opAll());
@@ -2074,23 +2073,21 @@ function renderTreemap() {
   if (hint) hint.textContent =
     `Fläche = monatliche Personen-Stunden (Dauer × Häufigkeit × Teilnehmerzahl) · Farbe = Kategorie · Klick auf Kategorie = Drill-down${suffix}`;
 
-  Plotly.newPlot("chart-treemap", [{
+  Plotly.react("chart-treemap", [{
     type:         "treemap",
     ids,
     labels,
     parents,
     values,
     branchvalues: "total",
-    marker:       { colors, line: { width: 2, color: "white" } },
+    marker:       { colors, line: { width: 1, color: "white" } },
     customdata,
     hovertemplate: htmpl,
     texttemplate:  "<b>%{label}</b><br>%{value} h",
-    insidetextfont: { size: 11, family: "DM Sans, system-ui, sans-serif" },
-    pathbar:      { visible: true, thickness: 26 }
+    insidetextfont: { size: 11, family: "DM Sans, system-ui, sans-serif" }
   }], {
-    title:        { text: "Zeitverteilung nach Kategorie (Personen-Stunden/Monat)", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
     font:         { family: "DM Sans, system-ui, sans-serif" },
-    margin:       { l: 0, r: 0, t: 60, b: 10 },
+    margin:       { l: 0, r: 0, t: 10, b: 10 },
     height:       560,
     plot_bgcolor:  "white",
     paper_bgcolor: "white"
@@ -2155,8 +2152,7 @@ function renderWirkungsMatrix() {
       marker: {
         color: katColor[kat],
         size: items.map(({m}) => Math.max(m.teilnehmer.length || 1, 1) * 6 + 8),
-        opacity: 0.82,
-        line: { color: "#fff", width: 1.5 }
+        opacity: 0.82
       }
     };
   });
@@ -2194,7 +2190,7 @@ function renderWirkungsMatrix() {
     paper_bgcolor: "#fff",
     font: { family: "Inter, system-ui, sans-serif", size: 12, color: "#374151" },
     hovermode: "closest"
-  }, { responsive: true });
+  }, { responsive: true, displayModeBar: false });
 }
 
 // ── Alle Charts neu rendern ───────────────────────────────────────────────────
@@ -2205,13 +2201,13 @@ function refreshAllCharts() {
     m.abteilungsuebergreifend = abts.size > 1;
   });
   netCache = null;
-  renderedTabs.delete(0); // Netzwerk wird beim nächsten Tab-Besuch frisch gerendert
-  renderedTabs.delete(1); // Kalender wird beim nächsten Tab-Besuch frisch gerendert
-  renderedTabs.delete(8); // Engpass wird beim nächsten Tab-Besuch frisch gerendert
-  renderedTabs.delete(9); // Zeitverteilung wird beim nächsten Tab-Besuch frisch gerendert
-  renderedTabs.delete(10); // Wirkungsmatrix wird beim nächsten Tab-Besuch frisch gerendert
+  renderedTabs.delete(1); // Netzwerk wird beim nächsten Tab-Besuch frisch gerendert
+  renderedTabs.delete(3); // Kalender wird beim nächsten Tab-Besuch frisch gerendert
+  renderedTabs.delete(6); // Engpass wird beim nächsten Tab-Besuch frisch gerendert
+  renderedTabs.delete(7); // Zeitverteilung wird beim nächsten Tab-Besuch frisch gerendert
+  renderedTabs.delete(8); // Wirkungsmatrix wird beim nächsten Tab-Besuch frisch gerendert
   if (sankeyRendered)  { renderedTabs.delete(4); renderSankey(); renderedTabs.add(4); }
-  if (abtRendered)     { renderedTabs.delete(3); renderAbteilung(); renderedTabs.add(3); abtRendered = true; }
+  if (abtRendered)     { renderedTabs.delete(2); renderAbteilung(); renderedTabs.add(2); abtRendered = true; }
   renderStats(); // abteilungsuebergreifend-Zählung aktualisieren
   renderPersonenTab(); // Dots neu berechnen
   showToast("Charts aktualisiert");
