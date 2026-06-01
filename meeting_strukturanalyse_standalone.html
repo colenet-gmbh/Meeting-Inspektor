@@ -364,7 +364,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "01.06.2026 14:30";
+const APP_VERSION = "01.06.2026 16:00";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -935,9 +935,9 @@ const TAB_INFO = {
        achten: "Volle Spalten an bestimmten Tagen = Meeting-Stau. Überlagerte Bubbles = Kollisionsrisiko für Personen in mehreren Abteilungen.",
        folgefragen: "Gibt es Tage mit zu vielen parallelen Meetings? Sind bestimmte Abteilungen an bestimmten Tagen überlastet?" },
   4: { title: "Kommunikationsflüsse (Sankey)",
-       was: "Flussbreite = gewichtete Meeting-Häufigkeit zwischen Abteilungen. Farbe dient der Unterscheidung – die Kommunikation ist bidirektional: beide Abteilungen treffen sich in denselben Meetings.",
-       achten: "Breite Flüsse = starke Vernetzung. Dünne oder fehlende Verbindungen zeigen Kommunikationssilos.",
-       folgefragen: "Welche Abteilungen kommunizieren kaum miteinander? Sind die Verbindungen zu den strategisch wichtigen Partnern vorhanden?" },
+       was: "Flussbreite = gewichtete Meeting-Häufigkeit zwischen Abteilungen. Die Kommunikation ist bidirektional – beide Abteilungen nehmen an denselben Meetings teil. Die Pfeilrichtung ist nicht bedeutsam, nur die Dicke zählt.",
+       achten: "Breite Flüsse = starke gegenseitige Vernetzung. Dünne oder fehlende Verbindungen zeigen Kommunikationssilos zwischen Abteilungen.",
+       folgefragen: "Welche Abteilungen kommunizieren kaum miteinander? Sind die Verbindungen zu strategisch wichtigen Partnern vorhanden?" },
   5: { title: "Teilnehmer-Überschneidungen",
        was: "Jaccard-Index: 0% = keine gemeinsamen Teilnehmer, 100% = identische Gruppe. Warme Farben = hohe Überschneidung. Top-Paare als Liste unten.",
        achten: "Orangene/rote Felder zeigen Meetings mit fast gleichen Teilnehmergruppen – Kandidaten für Zusammenlegung.",
@@ -2217,7 +2217,7 @@ function renderTreemap() {
     type:         "treemap",
     ids, labels, parents, values,
     branchvalues: "total",
-    marker:       { colors, line: { width: 1, color: "white" } },
+    marker:       { colors, line: { width: 1, color: "white" }, cornerradius: 6 },
     customdata, hovertemplate: htmpl,
     texttemplate:  "<b>%{label}</b><br>%{value} h",
     insidetextfont: { size: 11, family: "DM Sans, system-ui, sans-serif" }
@@ -2228,22 +2228,6 @@ function renderTreemap() {
     plot_bgcolor:  "white",
     paper_bgcolor: "white"
   }, { responsive: true, displayModeBar: false });
-
-  // Abgerundete Ecken per SVG-Postprocessing
-  // Sowohl sichtbare rects als auch clipPath-rects müssen gerundet werden,
-  // damit die Clip-Maske die Abrundung nicht aufhebt.
-  const _roundTreemap = () => {
-    const el = document.getElementById("chart-treemap");
-    if (!el) return;
-    el.querySelectorAll("rect, clipPath rect").forEach(r => {
-      const w = parseFloat(r.getAttribute("width") || 0);
-      const h = parseFloat(r.getAttribute("height") || 0);
-      if (w > 8 && h > 8) { r.setAttribute("rx", "6"); r.setAttribute("ry", "6"); }
-    });
-  };
-  setTimeout(_roundTreemap, 300);
-  setTimeout(_roundTreemap, 800); // zweiter Pass falls Plotly noch nachrückt
-
 }
 
 // ── FK-Toggle ─────────────────────────────────────────────────────────────────
