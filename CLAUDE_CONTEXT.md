@@ -66,24 +66,27 @@ const FREQ_MONTHLY = {
 
 ---
 
-## Tab-Struktur (10 Tabs, Index 0–9)
+## Tab-Struktur (11 Tabs, data-tab 0–10)
 
-| Index | Tab | Render-Funktion | Guard |
+Navigation via `data-tab`-Attribut (nicht DOM-Index). `showTab(idx)` selektiert per `querySelector(".panel[data-tab='idx']")`.
+
+| data-tab | Tab | Panel-ID | Render-Funktion |
 |---|---|---|---|
-| 0 | Netzwerk | `renderNetzwerk()` | renderedTabs |
-| 1 | Kalender | `renderKalender()` | renderedTabs |
-| 2 | Überschneidungen | `renderOverlap()` | renderedTabs |
-| 3 | Abteilungen | `renderAbteilung()` | renderedTabs |
-| 4 | Kommunikation | `renderSankey()` | renderedTabs |
-| 5 | Alle Meetings | `renderTable()` | kein Guard |
-| 6 | KI Analyse | statisch | – |
-| 7 | Personen | `renderPersonenTab()` | renderedTabs |
-| 8 | Engpass | `renderEngpass()` + `renderZeitlast()` | renderedTabs |
-| 9 | Zeitverteilung | `renderTreemap()` | renderedTabs |
+| 0 | Personen | panel-7 | `renderPersonenTab()` |
+| 1 | Netzwerk | panel-0 | `renderNetzwerk()` |
+| 2 | Abteilungen | panel-3 | `renderAbteilung()` (inkl. Toggle Anzahl/Freq.) |
+| 3 | Kalender | panel-1 | `renderKalender()` |
+| 4 | Kommunikation | panel-4 | `renderSankey()` + `renderChord()` |
+| 5 | Überschneidungen | panel-2 | `renderOverlap()` + Top-Paare-Liste |
+| 6 | Engpass | panel-8 | `renderEngpass()` + `renderZeitlast()` |
+| 7 | Zeitverteilung | panel-9 | `renderTreemap()` (cornerradius:6) |
+| 8 | Wirkung | panel-10 | `renderWirkungsMatrix()` |
+| 9 | Alle Meetings | panel-5 | `renderTable()` |
+| 10 | KI Analyse | panel-6 | statisch (Placeholder) |
 
-**Lazy-Rendering:** `renderedTabs` Set verhindert Doppel-Render beim Tab-Wechsel.  
-`showTab(7)` wird automatisch beim `showDashboard()` aufgerufen.  
-`refreshAllCharts()` invalidiert Tabs 0,1,8,9 und re-rendert direkt Tab 7.
+**Lazy-Rendering:** `renderedTabs` Set. `showDashboard()` ruft `showTab(0)` (Personen) auf.  
+**Info-Overlay:** Jeder Tab hat ℹ-Button → `showTabInfo(idx)` → Modal mit Erklärung.  
+**Colenet-Logo:** Base64-PNG im Header, rechts, klickbar → colenet.de (neuer Tab).
 
 ---
 
@@ -145,6 +148,26 @@ Matcht Header-Spalten case-insensitiv via `h.includes(c)`.
 | #11 | fix/personen-vera-sichtbar | Verantwortliche/r auch im Personen-Tab sichtbar |
 | #12 | fix/personen-space-filter | Personen mit Leerzeichen (Jana Müller) sichtbar |
 | #13 | fix/personen-platzhalter | Personen aus Platzhalter-Meetings sichtbar |
+| #14 | feat/wert-feld | Wirkung (1–4) in Tab 5 anzeigen + editieren + localStorage |
+| #15 | feat/wirkungs-matrix | Scatter-Chart Zeit vs. Wirkung in Tab 10 |
+| #16 | fix/treemap-label-kollision | Zeitverteilung bricht nicht bei Namenskollision (ids-Array) |
+| #17 | fix/wirkung-legende-overflow | Legende in Tab 10 überlappt nicht mehr den Hinweis-Text |
+| #18 | feat/abt-toggle | Pill-Toggle Anzahl / Freq./Monat in Tab Abteilungen |
+| #19 | feat/ux-refactor | Tab-Reihenfolge neu (data-tab), visuelle Konsistenz (Treemap, Wirkung) |
+| #20 | feat/chart-redesign | Abteilungen horizontal + 4 Rhythmusgruppen + Zeitverteilung Varianten |
+| #21 | feat/tab-info | ℹ-Overlay pro Tab + Überschneidungen Top-Paare + Sunburst entfernt |
+| #22 | fix/ux-feedback | 7 UX-Korrekturen: Legende, Reihenfolge, Sankey-Text, wertOverrides, KI-Text |
+| #23 | fix/treemap-corners-sankey | native cornerradius + Sankey-Beschreibung bidirektional |
+| #24 | feat/chord-sankey-redesign | Chord-Diagramm (D3) + Sankey nach Vernetzungsgrad sortiert + Treemap-Text |
+| #25 | fix/sankey-syntax | Syntaxfehler im Sankey-Hover behoben (?.0.92 → ? 0.92 : 0.04) |
+| #26 | fix/chord-size-hover | Chord-Größe (clientWidth) + D3-Tooltip statt SVG-title |
+| #27 | feat/chord-hover-highlight | Hover-Highlight auf Chord-Bändern + Label-Clipping behoben |
+| #28 | fix/sankey-revert-sort | Sankey bidirektional zurück, Nodes nach Vernetzungsgrad sortiert |
+| #29 | feat/colenet-logo | Colenet-Logo als Base64-PNG in Header eingebettet |
+| #30 | fix/logo-png | WebP → PNG (WebP wurde nicht gerendert) |
+| #31 | fix/logo-safari | Padding auf Wrapper-Div (Safari-Fix) |
+| – | direkt | Logo-Position: ganz rechts, Button links daneben |
+| – | direkt | Logo klickbar → colenet.de in neuem Tab |
 
 ---
 
@@ -161,14 +184,14 @@ main  ←  feat/<name>  (gh pr create → squash merge)
 
 ---
 
-## Offene Features – Gruppe 3 (JETZT ALS NÄCHSTES)
+## Gruppe 3 – Erledigt ✅
 
-`dauer` ✅ und `wert` ✅ sind bereits vollständig im Parser implementiert.  
-`wert` wird aus der Confluence-Spalte "Wirkung (1–4)" gelesen (Werte 1–4, null wenn leer).
+`feat/wert-feld` (PR #14) und `feat/wirkungs-matrix` (PR #15) sind gemergt.  
+Fixes: `fix/treemap-label-kollision` (PR #16), `fix/wirkung-legende-overflow` (PR #17).
 
 ---
 
-### feat/wert-feld
+### feat/wert-feld ✅ (PR #14)
 
 **Ziel:** `wert` (Wirkung 1–4) im Alle-Meetings-Tab (Tab 5) anzeigen und editierbar machen.
 
@@ -221,7 +244,7 @@ if (cfg.wertOverrides) {
 
 ---
 
-### feat/wirkungs-matrix (C3)
+### feat/wirkungs-matrix (C3) ✅ (PR #15)
 
 **Ziel:** Scatter-Chart – welche Meetings kosten viel Zeit und bringen wenig Wirkung?
 
@@ -324,3 +347,6 @@ const tagIdx = { "Mo":0, "Di":1, "Mi":2, "Do":3, "Fr":4, "—":5 };
 - ~~Namen mit Leerzeichen (Jana Müller) gefiltert~~ → PR #12
 - ~~Kalender-Kreise überlappend~~ → PR #9 (Dodge)
 - ~~Diagnose-Box zeigte `else if (dept)` Fall nicht~~ → kein eigener PR nötig (nach PR #13 obsolet)
+- ~~Zeitverteilung bricht bei Meetingname = Kategoriename~~ → PR #16 (ids-Array)
+- ~~Legende in Wirkungsmatrix überlappt Hinweis-Text~~ → PR #17
+- ~~Doppelklick FK-Toggle synchronisiert Personen-Tab nicht~~ → war bereits implementiert (renderedTabs.delete(7))
