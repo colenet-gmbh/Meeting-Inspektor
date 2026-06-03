@@ -143,13 +143,13 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 
 /* ── Personen-Tab ───────────────────────────────────────────── */
 #panel-7{padding:24px 36px 100px}
-.personen-grid{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:24px}
+.personen-grid{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;margin-bottom:24px}
 .dept-col{background:white;border-radius:10px;box-shadow:0 2px 8px rgba(89,178,165,.08);
-  padding:14px 16px;min-width:165px;flex:1 1 165px;max-width:220px}
-.dept-col-header{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
-  color:white;background:#59B2A5;border-radius:6px;padding:5px 10px;margin-bottom:12px;text-align:center}
-.person-chip{display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:5px;
-  border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:500;color:#1a2e2c;
+  padding:10px 12px;min-width:110px;flex:0 0 auto;align-self:flex-start}
+.dept-col-header{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:white;background:#59B2A5;border-radius:5px;padding:4px 8px;margin-bottom:8px;text-align:center}
+.person-chip{display:flex;align-items:center;gap:5px;padding:3px 7px;margin-bottom:3px;
+  border-radius:5px;cursor:pointer;font-size:.79rem;font-weight:500;color:#1a2e2c;
   background:#f8faf9;border:1px solid #e2e8f0;transition:background .15s,border-color .15s;
   position:relative;user-select:none}
 .person-chip:hover{background:#f0faf8;border-color:#59B2A5}
@@ -373,7 +373,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "01.06.2026 22:45";
+const APP_VERSION = "03.06.2026 10:00";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1919,20 +1919,26 @@ function renderPersonenTab() {
     }
   });
 
-  // Eine Spalte pro reguläre Abteilung
-  allDepts.forEach(dept => {
-    grid.appendChild(_buildDeptCol(dept, effectiveAbtFarben[dept] || "#59B2A5", deptPersons[dept] || [], null));
+  // Alle Abteilungen nach Personenanzahl sortieren (vollste zuerst), leere überspringen
+  const allDeptSet = new Set(allDepts);
+  const sortedDepts = [...allDepts]
+    .filter(d => (deptPersons[d] || []).length > 0)
+    .sort((a, b) => (deptPersons[b]?.length || 0) - (deptPersons[a]?.length || 0));
+
+  // Sonder-Kategorien anhängen – nur wenn nicht schon als reguläre Abteilung vorhanden
+  SPECIAL_DEPTS.forEach(sd => {
+    if (!allDeptSet.has(sd.key) && (deptPersons[sd.key] || []).length > 0) {
+      sortedDepts.push(sd.key);
+    }
   });
 
-  // Visueller Trenner vor den Sonder-Spalten
-  const sep = document.createElement("div");
-  sep.className = "personen-grid-sep";
-  grid.appendChild(sep);
-
-  // Sonder-Spalten: Stabsfunktion, Geschäftsleitung, Extern, Kunden
-  SPECIAL_DEPTS.forEach(sd => {
-    const col = _buildDeptCol(sd.key, sd.color, deptPersons[sd.key] || [], sd.cssClass);
-    col.title = sd.title;
+  // Spalten rendern
+  sortedDepts.forEach(dept => {
+    const specialDef = SPECIAL_DEPTS.find(sd => sd.key === dept);
+    const color  = specialDef ? specialDef.color : (effectiveAbtFarben[dept] || "#59B2A5");
+    const cssClass = specialDef ? specialDef.cssClass : null;
+    const col = _buildDeptCol(dept, color, deptPersons[dept] || [], cssClass);
+    if (specialDef) col.title = specialDef.title;
     grid.appendChild(col);
   });
 
@@ -1988,7 +1994,16 @@ function _buildDeptCol(dept, color, persons, specialClass) {
   hdr.textContent = dept;
   col.appendChild(hdr);
 
-  persons.forEach(p => col.appendChild(buildPersonChip(p, dept)));
+  // Ab 9 Personen: 2-spaltig intern → spart vertikalen Platz
+  if (persons.length >= 9) {
+    col.style.minWidth = "210px";
+    const inner = document.createElement("div");
+    inner.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:2px 6px";
+    persons.forEach(p => inner.appendChild(buildPersonChip(p, dept)));
+    col.appendChild(inner);
+  } else {
+    persons.forEach(p => col.appendChild(buildPersonChip(p, dept)));
+  }
   return col;
 }
 
