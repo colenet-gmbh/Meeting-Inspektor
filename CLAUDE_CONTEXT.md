@@ -15,7 +15,7 @@ Confluence: https://colenet.atlassian.net/wiki/spaces/KI/pages/2500427777
 Reines Browser-Tool: Nutzer öffnet HTML → Paste aus Confluence → fertig.  
 Kein Python, kein Server, kein Setup. Vollständig offline-fähig.
 
-**Aktueller Stand:** `APP_VERSION = "04.06.2026 10:00"` (~3050 Zeilen)  
+**Aktueller Stand:** `APP_VERSION = "04.06.2026 22:00"` (~3490 Zeilen)  
 **Testdaten:** `testdaten.tsv` im Repo – 73 fiktive Meetings, vollständige Beispielorganisation
 
 ---
@@ -45,6 +45,8 @@ Kein Python, kein Server, kein Setup. Vollständig offline-fähig.
 | `infofluss` | Informationsfluss | Freitext | |
 | `wert` | Wirkung (1–4) | Integer 1–4 (null=leer) | optional; editierbar im Dashboard |
 | `flugebene` | Flugebene (optional) | "FL1"/"FL2"/"FL3"/null | auto-suggested + editierbar; `flugebeneAuto=true` wenn vorgeschlagen |
+| `gruppenTeilnehmer` | (berechnet) | Array | Teilnehmer die als Gruppe erkannt wurden |
+| `hatGruppenTeilnehmer` | (berechnet) | Boolean | true wenn Gruppen-Platzhalter in Teilnehmern |
 | `status` | Status | "Aktiv" / "Geplant" | |
 | `abteilungsuebergreifend` | Abteilungsübergreifend | Boolean | nachträglich aus effectivePersonAbt berechnet |
 | `ist_platzhalter` | Platzhalter | Boolean | |
@@ -84,9 +86,12 @@ Navigation via `data-tab`-Attribut. `showTab(idx)` nutzt `querySelector(".panel[
 | 6 | Engpass | panel-8 | `renderEngpass()` + `renderZeitlast()` | h/Monat pro Person |
 | 7 | Zeitverteilung | panel-9 | `renderTreemap()` | cornerradius:6, uniformtext hide |
 | 8 | Wirkung | panel-10 | `renderWirkungsMatrix()` | Scatter: Zeit vs. Wirkung, Quadranten |
-| 9 | Alle Meetings | panel-5 | `renderTable()` | Wirkung + Flugebene editierbar per Klick |
+| 9 | Alle Meetings | panel-5 | `renderTable()` | Wirkung + Flugebene editierbar per Klick · ⚑ = Gruppen-Teilnehmer |
 | 10 | Flight Levels | panel-fl | `renderFlightLevels()` | 5 Diagnose-Visualisierungen (F1–F5) |
 | 11 | KI Analyse | panel-6 | statisch | Placeholder für KI-Ausbaustufe |
+| 12 | Datenpflege | panel-dp | `renderDatapflege()` | **[ADMIN]** Abteilungstypen · Datenqualität · Gruppen · Config Export/Import |
+
+**Tab-Bar:** Zwei Gruppen – „Analyse" (Tabs 1–11) und „Datenpflege" (Tabs 0, 9, 12). Admin-Gruppe `.tab-group-admin` → grauer active-State (statt teal).
 
 **Lazy-Rendering:** `renderedTabs` Set. `showDashboard()` ruft `showTab(0)` (Personen) auf.  
 **`refreshAllCharts()`** invalidiert alle renderedTabs und re-rendert direkt Tab 0 (Personen).
@@ -175,14 +180,17 @@ Zwei Charts untereinander:
   "personAbt": { "Maa": "Business Unit" },
   "fkList": ["Maa", "Bsc"],
   "wertOverrides": { "Business Unit||Leitungsmeeting||0": 3 },
-  "flugebeneOverrides": { "Business Unit||Leitungsmeeting": "FL3" }
+  "flugebeneOverrides": { "Business Unit||Leitungsmeeting": "FL3" },
+  "deptFunktionen": { "Business Unit": "operativ", "Management": "strategisch" },
+  "gruppenAufloesungen": { "Business Unit||Daily||BU-Team": ["Maa", "Bsc", "Tho"] }
 }
 ```
 
 **Wichtig:**
 - `wertOverrides` werden bei neuem Daten-Import (in `showDashboard()`) gelöscht.
 - `flugebeneOverrides` **bleiben** bei neuem Import erhalten (stabiler Schlüssel `abt||name` ohne idx) – FL-Klassifikation ist eine stabile Eigenschaft eines Meeting-Typs.
-- Nur `personAbt`, `fkList` und `flugebeneOverrides` bleiben sessions-übergreifend erhalten.
+- `personAbt`, `fkList`, `flugebeneOverrides`, `deptFunktionen` und `gruppenAufloesungen` bleiben sessions-übergreifend erhalten.
+- Export/Import als `meeting-config.json` über den Datenpflege-Tab möglich.
 
 ---
 
@@ -218,8 +226,20 @@ Info-Modal für Tab idx öffnen/schließen.
 ### `setAbtMode(mode)`
 Toggle zwischen `"anzahl"` und `"freq"` im Abteilungen-Tab. Ruft `renderAbtChart()` auf.
 
+### `isGruppenParticipant(name)`
+Erkennt Gruppen-Platzhalter in Teilnehmern: Kleinbuchstabe-Start, >30 Zeichen, passt zu `allDepts`, SPECIAL_DEPTS oder enthält „alle/team/gruppe"-Keywords.
+
 ### `suggestFlightLevel(m)`
-Auto-Klassifikation FL1/FL2/FL3 basierend auf: `abteilungsuebergreifend` (stärkstes Signal), Teilnehmeranzahl, Rhythmus, Keywords in Kategorie/Zweck.
+Auto-Klassifikation FL1/FL2/FL3. Stärkstes Signal: **`deptFunktionen[m.abteilung]`** (+5 Punkte). Dann `abteilungsuebergreifend`, Teilnehmeranzahl, Rhythmus, Keywords.
+
+### `renderDatapflege()`
+Drei Sektionen: Abteilungstypen-Grid (`renderDeptTypenGrid`), Datenqualitäts-Cockpit (`renderQualitaetsCockpit`), Gruppen-Teilnehmer-Auflösung (`renderGruppenTeilnehmerSection`).
+
+### `setDeptTyp(sel)`, `saveGruppenAufloesung(btn)`
+Inline-Editierung im Datenpflege-Tab. Speichern via `saveConfig()`.
+
+### `exportConfig()`, `importConfigFile(input)`
+Export: Download `meeting-config.json`. Import: JSON lesen → validieren → `applyStoredConfig()` → re-init → `refreshAllCharts()`.
 
 ### `renderFlightLevels()`
 5 Diagnose-Visualisierungen im Flight-Levels-Tab:
@@ -291,6 +311,8 @@ main  ←  feat/<name>  (gh pr create → squash merge)
 | #29–#31 | Colenet-Logo: Base64-PNG, Safari-Fix, Position |
 | #32 | Personen-Tab: adaptives Layout, Sortierung, 2-Spalten, kein Duplikat |
 | #33 | Flight Levels: Tab 10, 5 Diagnose-Visualisierungen (F1–F5), Auto-Klassifikation, ~-Badge |
+| #34 | Datenpflege-Tab: Abteilungstypen, Datenqualität, Gruppen-Teilnehmer, Config Export/Import, Tab-Grouping |
+| #35 | Bug: CSV-Import kaputt (Safari nested Template-Literals); Script in 3 Blöcke aufgeteilt; Import-Screen UX-Redesign (zwei gleichwertige Optionen, OS-neutral) |
 
 ---
 
@@ -299,6 +321,7 @@ main  ←  feat/<name>  (gh pr create → squash merge)
 ### Confluence-Seite (Nächste Schritte)
 - KI-Analyse Tab (Tab 11) mit echten Beobachtungen befüllen
 - Flight Levels: Testdaten mit FL-Spalte versehen oder Auto-Klassifikation evaluieren
+- Import-Screen: `setImportMethod('confluence'|'csv')` toggle-Funktion; `handleFileDrop(event)` für Drag&Drop
 
 ### Gruppe 4 – Bewusst zurückgestellt
 

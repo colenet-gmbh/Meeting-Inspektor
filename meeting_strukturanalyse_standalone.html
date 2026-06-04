@@ -16,38 +16,53 @@ body{font-family:"DM Sans",system-ui,sans-serif;background:#f8faf9;color:#1a2e2c
 #import-screen{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
   min-height:100vh;padding:40px 20px;background:#f8faf9}
 .import-card{background:white;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.1);
-  padding:36px 40px;max-width:680px;width:100%}
+  padding:36px 40px;max-width:720px;width:100%}
 .import-logo{font-size:1.7rem;font-weight:700;color:#246b61;margin-bottom:4px;letter-spacing:-0.5px}
-.import-sub{font-size:.85rem;color:#64748b;margin-bottom:28px}
-.import-section-title{font-size:.8rem;font-weight:600;color:#94a3b8;letter-spacing:.06em;
-  text-transform:uppercase;margin-bottom:10px;margin-top:22px}
-.import-instructions{background:#f0faf8;border:1px solid #b2ddd8;border-radius:8px;
-  padding:12px 16px;margin-bottom:18px;font-size:.84rem;color:#246b61;line-height:1.6}
-.import-instructions code{background:#c8e6e0;padding:1px 5px;border-radius:3px;font-size:.83em}
-textarea#paste-area{width:100%;min-height:180px;border:2px solid #e2e8f0;border-radius:8px;
-  padding:12px;font-family:"DM Sans",system-ui,monospace;font-size:.82rem;color:#374151;
-  resize:vertical;outline:none;transition:border .15s}
-textarea#paste-area:focus{border-color:#59B2A5;box-shadow:0 0 0 3px rgba(89,178,165,0.18)}
+.import-sub{font-size:.85rem;color:#64748b;margin-bottom:20px}
+/* Zwei gleichwertige Optionen */
+.import-options{display:flex;gap:0;margin-top:4px;align-items:stretch;
+  border:2px solid #e2e8f0;border-radius:10px;overflow:hidden}
+.import-option{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;padding:22px 24px}
+.import-option+.import-option{border-left:2px solid #e2e8f0}
+.import-option-header{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.import-option-icon{font-size:1.3rem;flex-shrink:0}
+.import-option-title{font-size:.78rem;font-weight:700;color:#1a2e2b;
+  text-transform:uppercase;letter-spacing:.07em}
+.import-option-sub{font-size:.74rem;color:#94a3b8;margin-top:1px}
+.import-hint-box{font-size:.8rem;color:#246b61;line-height:1.55;
+  background:#f0faf8;border:1px solid #b2ddd8;border-radius:7px;padding:9px 12px;
+  flex:0 0 auto}
+.import-hint-box code{background:#c8e6e0;padding:1px 4px;border-radius:3px;font-size:.8em}
+textarea#paste-area{width:100%;min-height:130px;border:1.5px solid #e2e8f0;border-radius:7px;
+  padding:10px 12px;font-family:"DM Sans",system-ui,monospace;font-size:.81rem;color:#374151;
+  resize:vertical;outline:none;transition:border .15s;box-sizing:border-box;flex:1}
+textarea#paste-area:focus{border-color:#59B2A5;box-shadow:0 0 0 3px rgba(89,178,165,0.15)}
 textarea#paste-area::placeholder{color:#cbd5e1}
+.import-upload-area{flex:1;min-height:0;border:1.5px dashed #cbd5e1;border-radius:7px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .15s;
+  color:#6b7280;min-height:130px}
+.import-upload-area:hover,.import-upload-area.drag-active{border-color:#59B2A5;
+  background:#f0faf8;color:#246b61}
+.import-upload-area svg{color:#59B2A5}
+.import-upload-text{font-size:.84rem;font-weight:500;margin:0}
+.import-upload-hint{font-size:.73rem;color:#94a3b8;margin:0}
+#file-input{display:none}
+/* Buttons */
 .toggle-grp{display:flex;gap:4px;justify-content:flex-end;margin-bottom:8px}
 .toggle-grp button{padding:4px 14px;border:1px solid #d1d5db;border-radius:20px;background:#f9fafb;font-family:inherit;font-size:0.8rem;cursor:pointer;color:#6b7280;transition:all .15s}
 .toggle-grp button.active{background:#59B2A5;border-color:#59B2A5;color:#fff;font-weight:600}
 .toggle-grp button:hover:not(.active){border-color:#59B2A5;color:#59B2A5}
 .btn-primary{background:#59B2A5;color:white;border:none;border-radius:8px;
   padding:10px 22px;font-family:inherit;font-size:.88rem;font-weight:600;
-  cursor:pointer;transition:background .15s;margin-top:12px}
+  cursor:pointer;transition:background .15s;margin-top:4px;width:100%}
 .btn-primary:hover{background:#4a9e92}
-.import-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#94a3b8;font-size:.8rem}
-.import-divider::before,.import-divider::after{content:"";flex:1;border-top:1px solid #e2e8f0}
-.file-upload-label{display:inline-flex;align-items:center;gap:8px;border:2px dashed #cbd5e1;
-  border-radius:8px;padding:12px 18px;cursor:pointer;font-size:.85rem;color:#64748b;
-  transition:all .15s;width:100%}
-.file-upload-label:hover{border-color:#59B2A5;color:#59B2A5;background:#f0faf8}
-#file-input{display:none}
-.import-status{margin-top:16px;padding:10px 14px;border-radius:8px;font-size:.85rem;
+.import-status{margin-top:14px;padding:10px 14px;border-radius:8px;font-size:.85rem;
   font-weight:500;display:none}
 .import-status.ok{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;display:block}
 .import-status.err{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;display:block}
+@media(max-width:540px){.import-options{flex-direction:column}
+  .import-option+.import-option{border-left:none;border-top:2px solid #e2e8f0}}
 
 /* ── Dashboard ───────────────────────────────────────────────── */
 #dashboard{display:none}
@@ -64,23 +79,49 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   color:white;border-radius:7px;padding:7px 14px;font-family:inherit;font-size:.8rem;
   cursor:pointer;transition:background .15s;white-space:nowrap;position:relative;z-index:1}
 .btn-reload:hover{background:rgba(255,255,255,.25)}
-.stats{display:flex;gap:12px;padding:16px 36px;flex-wrap:wrap}
-.stat{background:white;border-radius:10px;padding:14px 20px;flex:1;min-width:120px;
-  text-align:center;box-shadow:0 1px 4px rgba(89,178,165,0.08);border:1px solid #f1f5f9}
-.stat .val{font-size:1.9rem;font-weight:700;color:#59B2A5;line-height:1;
-  font-family:"DM Mono",monospace}
-.stat .lbl{font-size:.75rem;color:#4a6b67;margin-top:3px}
-.stat-warn{border-color:#fcd34d;background:#fffbeb}
-.stat-warn .val{color:#b83232}
-.warnings{margin:0 36px 12px;background:#fffbeb;border:1px solid #fcd34d;
-  border-left:4px solid #f59e0b;border-radius:6px;padding:8px 14px;font-size:.82rem}
-.warn-toggle{background:none;border:none;cursor:pointer;font-family:inherit;
-  font-size:.82rem;font-weight:600;color:#92400e;padding:2px 0;display:block;width:100%}
-.warn-toggle:hover{color:#78350f}
-.warnings ul{padding-left:16px;margin-top:6px}
-.warnings li{margin-bottom:2px}
-.tab-bar{display:flex;gap:2px;padding:0 36px;background:#f8faf9;
+/* Kommunikation Executive Briefing */
+.komm-briefing-card{background:white;border-radius:10px;padding:16px 20px;
+  margin-bottom:16px;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(89,178,165,.06)}
+.komm-insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media(max-width:600px){.komm-insights-grid{grid-template-columns:1fr}}
+.komm-insight{background:#f8faf9;border-radius:8px;padding:10px 13px;border:1px solid #e8f0ee}
+.komm-insight-label{font-size:.7rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:#6b7280;margin-bottom:3px}
+.komm-insight-value{font-size:.92rem;font-weight:700;color:#1a2e2b;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.komm-insight-sub{font-size:.73rem;color:#9ca3af;margin-top:2px}
+/* Zeitverteilung Executive Briefing */
+.treemap-briefing{background:white;border-radius:10px;padding:16px 20px;
+  margin-bottom:16px;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(89,178,165,.06)}
+.tbr-header{display:flex;justify-content:space-between;align-items:baseline;
+  margin-bottom:10px;flex-wrap:wrap;gap:4px}
+.tbr-title{font-size:.77rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:#1a2e2b}
+.tbr-sub{font-size:.75rem;color:#6b7280}
+.tbr-row{display:flex;gap:8px;padding:5px 0;border-top:1px solid #f1f5f9;align-items:center}
+.tbr-rank{color:#9ca3af;font-size:.71rem;min-width:16px;flex-shrink:0}
+.tbr-body{flex:1;min-width:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tbr-name{font-size:.82rem;font-weight:600;color:#1a2e2b;flex-shrink:0;max-width:220px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbr-cost{font-size:.79rem;font-weight:700;color:#59B2A5;flex-shrink:0}
+.tbr-pers{font-size:.75rem;color:#9ca3af;flex-shrink:0}
+.tbr-fk{font-size:.72rem;font-weight:700;color:#d97706;background:#fef3c7;
+  padding:1px 6px;border-radius:8px;flex-shrink:0}
+.tbr-insight{margin-top:10px;padding-top:8px;border-top:1px solid #f1f5f9;
+  font-size:.78rem;color:#4a6b67;display:flex;gap:12px;flex-wrap:wrap}
+.tbr-insight-item{display:flex;align-items:center;gap:5px}
+/* Tabelle Summary */
+.table-summary{font-size:.78rem;color:#6b7280;padding:2px 0 10px;
+  display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.table-summary .s-warn{color:#d97706;font-weight:600}
+.tab-bar{display:flex;gap:0;padding:0 36px;background:#f8faf9;align-items:flex-end;
   border-bottom:2px solid #e2e8f0;position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.tab-group{display:flex;align-items:flex-end;gap:2px}
+.tab-group-sep{width:1px;background:#d1d5db;height:22px;margin:0 10px;align-self:center;flex-shrink:0}
+.tab-group-label{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;
+  color:#b0bec5;padding:0 4px 14px;align-self:flex-end;user-select:none;white-space:nowrap}
+.tab-group-admin .tab-btn:hover{color:#6b7280}
+.tab-group-admin .tab-btn.active{color:#6b7280;border-bottom-color:#9ca3af}
 .tab-btn{padding:10px 16px;border:none;background:none;cursor:pointer;
   font-family:inherit;font-size:.83rem;font-weight:500;color:#4a6b67;
   border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
@@ -134,6 +175,20 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 .findings-placeholder p{font-size:.88rem;color:#4a6b67;max-width:520px;margin:0 auto 8px;line-height:1.65}
 .findings-placeholder-sub{color:#7a9e9a !important;font-size:.83rem !important}
 /* Overlap legend */
+/* Überschneidungen Tab */
+.top-paare-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+@media(max-width:680px){.top-paare-grid{grid-template-columns:1fr}}
+.top-paare-title{font-size:.82rem;font-weight:700;color:#374151;margin:0 0 6px}
+.pair-item{display:flex;gap:8px;padding:7px 0;border-top:1px solid #f1f5f9;align-items:flex-start}
+.pair-rank{color:#9ca3af;font-size:.72rem;min-width:16px;padding-top:3px}
+.pair-body{flex:1;min-width:0}
+.pair-names{font-size:.83rem;line-height:1.35}
+.pair-gem{font-size:.74rem;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.overlap-toggle-btn{background:#f8faf9;border:1.5px solid #e2e8f0;border-radius:8px;
+  padding:8px 16px;font-family:inherit;font-size:.84rem;font-weight:600;color:#4a6b67;
+  cursor:pointer;transition:all .15s;width:100%}
+.overlap-toggle-btn:hover{background:#f0faf8;border-color:#59B2A5;color:#246b61}
+.overlap-toggle-btn.active{background:#f0faf8;border-color:#59B2A5;color:#246b61}
 .overlap-legend{display:flex;flex-direction:column;gap:8px;margin-top:12px;
   background:white;border-radius:8px;padding:12px 16px;border:1px solid #f1f5f9;
   font-size:.83rem;color:#374151}
@@ -191,6 +246,36 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   background:#1a2e2c;color:white;padding:8px 18px;border-radius:8px;
   font-size:.82rem;z-index:10000;opacity:0;transition:opacity .25s;pointer-events:none}
 .toast.visible{opacity:1}
+/* ── Datenpflege-Tab ────────────────────────────────────────────────────── */
+.dp-section{background:white;border-radius:10px;padding:20px 24px;margin-bottom:16px;
+  box-shadow:0 2px 8px rgba(89,178,165,.06);border:1px solid #f1f5f9}
+.dp-section-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:#1a2e2b;margin:0 0 4px}
+.dp-section-desc{font-size:.82rem;color:#4a6b67;margin:0 0 14px;line-height:1.55}
+.dp-dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px}
+.dp-dept-row{display:flex;align-items:center;gap:8px;min-width:0;
+  background:#f8faf9;border:1px solid #e8f0ee;border-radius:7px;padding:5px 8px}
+.dp-typ-sel{font-family:inherit;font-size:.8rem;border:1px solid #e2e8f0;border-radius:6px;
+  padding:5px 8px;background:#f9fafb;color:#374151;cursor:pointer;flex:1;min-width:0}
+.dp-typ-sel:focus{outline:none;border-color:#59B2A5}
+.dp-quality-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:4px}
+.dp-qual-card{background:#f8faf9;border-radius:8px;padding:11px 13px;border:1px solid #e8f0ee}
+.dp-qual-header{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.dp-qual-label{font-size:.79rem;font-weight:600;color:#1a2e2b;flex:1}
+.dp-qual-val{font-size:.77rem;font-weight:600;white-space:nowrap}
+.dp-qual-bar{height:5px;background:#e8f0ee;border-radius:3px;overflow:hidden;margin-bottom:5px}
+.dp-qual-fill{height:100%;border-radius:3px;transition:width .3s}
+.dp-qual-hint{font-size:.74rem;color:#7a9e9a;line-height:1.4}
+.dp-gruppen-row{background:#f8faf9;border-radius:8px;padding:10px 12px;margin-bottom:7px;
+  border:1px solid #e8f0ee}
+.dp-gruppen-meeting{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap}
+.dp-gruppen-assign{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.dp-gruppen-sel{font-family:inherit;font-size:.79rem;border:1px solid #e2e8f0;border-radius:6px;
+  min-width:160px;max-width:260px;background:#fff;padding:2px}
+.dp-count-badge{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 7px;
+  border-radius:10px;margin-left:7px;vertical-align:middle}
+.dp-count-ok{background:#d1fae5;color:#065f46}
+.dp-count-warn{background:#fef3c7;color:#92400e}
 /* ── Flight Levels Tab ─────────────────────────────────────────────────── */
 .fl-kpi-row{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap}
 .fl-kpi-card{flex:1;min-width:140px;border-radius:10px;padding:14px 18px}
@@ -220,26 +305,59 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <div class="import-logo">Meeting Strukturanalyse</div>
     <div class="import-sub">Standalone Dashboard · läuft komplett im Browser · kein Python, kein Server <span id="version-badge" style="opacity:.45;font-size:.78rem">v1.6</span></div>
 
-    <div class="import-section-title">Schritt 1: Daten aus Confluence kopieren</div>
-    <div class="import-instructions">
-      Öffne die Meeting-Tabelle in Confluence → <code>⌘A</code> (alles markieren) → <code>⌘C</code> (kopieren) →
-      unten in das Textfeld einfügen (<code>⌘V</code>).<br>
-      Alternativ kannst du auch eine <strong>CSV-Datei</strong> hochladen (gleiche Spaltenstruktur).
-    </div>
-
-    <div class="import-section-title">Schritt 2: Einfügen oder hochladen</div>
-    <textarea id="paste-area" placeholder="Confluence-Tabelle hier einfügen (⌘A in Confluence → ⌘C → hier ⌘V)...&#10;&#10;Erwartet wird eine Tab-getrennte Tabelle mit diesen Spalten (in beliebiger Reihenfolge):&#10;Abteilung · Meetingname · Kategorie · Zweck · Verantwortlich · Personen · Rhythmus · Dauer · Informationsfluss · Wirkung (1–4) · Status · Abteilungsübergreifend · Platzhalter · Learnings&#10;&#10;Optionale Spalten (Dauer, Wirkung) können leer bleiben."></textarea>
-    <button class="btn-primary" onclick="loadFromPaste()">Prüfen &amp; Laden</button>
-
-    <div class="import-divider">oder</div>
-
-    <label class="file-upload-label" for="file-input">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      CSV-Datei wählen (.csv, .tsv, .txt)
-      <input type="file" id="file-input" accept=".csv,.tsv,.txt" onchange="loadFromFile(this)">
-    </label>
-
     <div id="import-status" class="import-status"></div>
+
+    <div class="import-options">
+
+      <!-- Option A: Aus Confluence -->
+      <div class="import-option">
+        <div class="import-option-header">
+          <span class="import-option-icon">📋</span>
+          <div>
+            <div class="import-option-title">Aus Confluence</div>
+            <div class="import-option-sub">Tabelle kopieren &amp; einfügen</div>
+          </div>
+        </div>
+        <div class="import-hint-box">
+          Tabelle in Confluence öffnen → alles markieren
+          (<code>Strg+A</code> / <code>⌘A</code>) → kopieren
+          (<code>Strg+C</code> / <code>⌘C</code>) → hier einfügen
+          (<code>Strg+V</code> / <code>⌘V</code>)
+        </div>
+        <textarea id="paste-area" placeholder="Confluence-Tabelle hier einfügen…&#10;&#10;Erwartet: Abteilung · Meetingname · Personen · Rhythmus · Status&#10;Optional: Dauer · Wirkung (1–4) · Flugebene (FL1/FL2/FL3)"></textarea>
+        <button class="btn-primary" onclick="loadFromPaste()">Prüfen &amp; Laden</button>
+      </div>
+
+      <!-- Option B: CSV/TSV-Datei -->
+      <div class="import-option">
+        <div class="import-option-header">
+          <span class="import-option-icon">📁</span>
+          <div>
+            <div class="import-option-title">CSV / TSV-Datei</div>
+            <div class="import-option-sub">Datei hochladen oder ablegen</div>
+          </div>
+        </div>
+        <div class="import-hint-box">
+          CSV, TSV oder TXT-Datei mit gleicher Spaltenstruktur.
+          Datei auswählen oder per Drag &amp; Drop in den Upload-Bereich ablegen.
+        </div>
+        <label class="import-upload-area" for="file-input"
+               ondragover="event.preventDefault();this.classList.add('drag-active')"
+               ondragleave="this.classList.remove('drag-active')"
+               ondrop="handleFileDrop(event,this)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <p class="import-upload-text">Hier ablegen</p>
+          <p class="import-upload-hint">CSV · TSV · TXT</p>
+        </label>
+        <button class="btn-primary" onclick="document.getElementById('file-input').click()">Datei auswählen</button>
+        <input type="file" id="file-input" accept=".csv,.tsv,.txt" onchange="loadFromFile(this)">
+      </div>
+
+    </div>
   </div>
 </div>
 
@@ -260,22 +378,27 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     </div>
   </div>
 
-  <div class="stats" id="stats-bar"></div>
-  <div id="warnings-bar"></div>
-
   <div class="tab-bar">
-    <button class="tab-btn active" data-tab="0" onclick="showTab(0)">Personen</button>
-    <button class="tab-btn" data-tab="1" onclick="showTab(1)">Netzwerk</button>
-    <button class="tab-btn" data-tab="2" onclick="showTab(2)">Abteilungen</button>
-    <button class="tab-btn" data-tab="3" onclick="showTab(3)">Kalender</button>
-    <button class="tab-btn" data-tab="4" onclick="showTab(4)">Kommunikation</button>
-    <button class="tab-btn" data-tab="5" onclick="showTab(5)">Überschneidungen</button>
-    <button class="tab-btn" data-tab="6" onclick="showTab(6)">Engpass</button>
-    <button class="tab-btn" data-tab="7" onclick="showTab(7)">Zeitverteilung</button>
-    <button class="tab-btn" data-tab="8" onclick="showTab(8)">Wirkung</button>
-    <button class="tab-btn" data-tab="9" onclick="showTab(9)">Alle Meetings</button>
-    <button class="tab-btn" data-tab="10" onclick="showTab(10)">Flight Levels</button>
-    <button class="tab-btn" data-tab="11" onclick="showTab(11)">KI Analyse</button>
+    <div class="tab-group">
+      <span class="tab-group-label">Analyse</span>
+      <button class="tab-btn" data-tab="1" onclick="showTab(1)">Netzwerk</button>
+      <button class="tab-btn" data-tab="2" onclick="showTab(2)">Abteilungen</button>
+      <button class="tab-btn" data-tab="3" onclick="showTab(3)">Kalender</button>
+      <button class="tab-btn" data-tab="4" onclick="showTab(4)">Kommunikation</button>
+      <button class="tab-btn" data-tab="5" onclick="showTab(5)">Überschneidungen</button>
+      <button class="tab-btn" data-tab="6" onclick="showTab(6)">Engpass</button>
+      <button class="tab-btn" data-tab="7" onclick="showTab(7)">Zeitverteilung</button>
+      <button class="tab-btn" data-tab="8" onclick="showTab(8)">Wirkung</button>
+      <button class="tab-btn" data-tab="10" onclick="showTab(10)">Flight Levels</button>
+      <button class="tab-btn" data-tab="11" onclick="showTab(11)">KI Analyse</button>
+    </div>
+    <div class="tab-group-sep"></div>
+    <div class="tab-group tab-group-admin">
+      <span class="tab-group-label">Datenpflege</span>
+      <button class="tab-btn active" data-tab="0" onclick="showTab(0)">Personen</button>
+      <button class="tab-btn" data-tab="9" onclick="showTab(9)">Alle Meetings</button>
+      <button class="tab-btn" data-tab="12" onclick="showTab(12)">Konfiguration</button>
+    </div>
   </div>
 
   <div id="panel-0" class="panel" data-tab="1">
@@ -290,13 +413,20 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   </div>
   <div id="panel-2" class="panel" data-tab="5">
     <button class="tab-info-btn" onclick="showTabInfo(5)">ℹ</button>
-    <div id="top-paare-list" style="margin-bottom:24px"></div>
-    <div class="chart-card" id="chart-overlap"></div>
-    <div class="overlap-legend">
-      <span class="ol-item"><span class="ol-dot" style="background:#c25050"></span><b>Hohe Überschneidung (Terrakotta)</b> → ähnliche Teilnehmergruppe → mögliche Redundanz</span>
-      <span class="ol-item"><span class="ol-dot" style="background:#c8e6e0"></span><b>Keine Überschneidung (Mint)</b> → verschiedene Teilnehmer. Fehlende Meetings erkennst du besser im Netzwerk-Tab.</span>
+    <div id="top-paare-list"></div>
+    <div id="overlap-expand-bar" style="margin:14px 0 0">
+      <button id="overlap-toggle-btn" class="overlap-toggle-btn" onclick="toggleOverlapHeatmap()">
+        ▸ Vollständige Heatmap anzeigen
+      </button>
     </div>
-    <p class="hint">Zellwert = Jaccard-Index (0 = keine, 1 = identische Teilnehmergruppe) · Hover = Überschneidende Personen</p>
+    <div id="overlap-chart-wrap" style="display:none;margin-top:14px">
+      <div class="chart-card" id="chart-overlap"></div>
+      <div class="overlap-legend">
+        <span class="ol-item"><span class="ol-dot" style="background:#c25050"></span><b>Hohe Überschneidung (Terrakotta)</b> → ähnliche Teilnehmergruppe → mögliche Redundanz</span>
+        <span class="ol-item"><span class="ol-dot" style="background:#c8e6e0"></span><b>Keine Überschneidung (Mint)</b> → verschiedene Teilnehmer.</span>
+      </div>
+      <p class="hint">Zellwert = Jaccard-Index (0 = keine, 1 = identische Teilnehmergruppe) · Hover = Überschneidende Personen</p>
+    </div>
   </div>
   <div id="panel-3" class="panel" data-tab="2">
     <button class="tab-info-btn" onclick="showTabInfo(2)">ℹ</button>
@@ -313,13 +443,18 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   </div>
   <div id="panel-4" class="panel" data-tab="4">
     <button class="tab-info-btn" onclick="showTabInfo(4)">ℹ</button>
+    <div id="komm-briefing"></div>
     <div class="chart-card" id="chart-sankey"></div>
     <p class="hint">Flussdicke = gewichtete Meeting-Häufigkeit · Nodes sortiert nach Vernetzungsgrad (oben = am stärksten vernetzt) · Richtung nicht bedeutsam</p>
-    <div class="chart-card" id="chart-chord" style="margin-top:20px"></div>
-    <p class="hint">Chord-Diagramm: Bogengröße = Gesamtkommunikation der Abteilung · Bandbreite = bidirektionale Meeting-Häufigkeit · Hover = Details</p>
+    <div id="chord-expand-bar" style="margin:12px 0"></div>
+    <div id="chord-wrap" style="display:none">
+      <div class="chart-card" id="chart-chord"></div>
+      <p class="hint">Bogengröße = Gesamtkommunikation · Bandbreite = bidirektionale Meeting-Häufigkeit · Hover = Details</p>
+    </div>
   </div>
   <div id="panel-5" class="panel" data-tab="9">
     <button class="tab-info-btn" onclick="showTabInfo(9)">ℹ</button>
+    <div id="table-summary" class="table-summary"></div>
     <div class="table-toolbar">
       <input type="text" id="table-search" placeholder="Meeting, Person, Abteilung …" oninput="filterTable()">
       <div class="table-meta" id="table-count"></div>
@@ -329,7 +464,6 @@ textarea#paste-area::placeholder{color:#cbd5e1}
         <thead><tr>
           <th>Abteilung</th><th>Meeting</th><th>Kategorie</th><th>Rhythmus</th>
           <th title="Dauer in Minuten">Min.</th>
-          <th title="Flight Level: FL1=Operativ · FL2=Koordination · FL3=Strategisch">FL</th>
           <th title="Empfundener Wert 1–4 (Selbsteinschätzung)">Wirkg.</th>
           <th>Verantwortl.</th><th>Teilnehmer</th><th>Status</th>
           <th title="Abteilungsübergreifend">Übergr.</th><th>Zweck</th><th>Learnings</th>
@@ -341,6 +475,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   </div>
   <div id="panel-fl" class="panel" data-tab="10">
     <button class="tab-info-btn" onclick="showTabInfo(10)">ℹ</button>
+    <div id="fl-briefing" style="margin-bottom:16px"></div>
     <div class="fl-kpi-row" id="fl-kpi-cards"></div>
 
     <p class="fl-section-title">F1 – Existiert Koordination? (FL2-Ebene)</p>
@@ -356,7 +491,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <p class="fl-section-title">F3 – Wirkungsgrad nach Ebene</p>
     <div class="chart-card" id="chart-fl-wirkung"></div>
     <div id="fl-alert-f3" class="fl-alert"></div>
-    <p class="hint">Wirkung kann im Tab „Alle Meetings" eingetragen werden. FL2/FL3-Meetings mit Wirkung ≤ 2 sind Kandidaten für „Koordinationstheater".</p>
+    <p class="hint">Wirkung aus Confluence-Spalte (1–4). FL2/FL3-Meetings mit Wirkung ≤ 2 sind Kandidaten für „Koordinationstheater".</p>
 
     <p class="fl-section-title">F4 – Ebenen-Beteiligung: Wer ist Brückenkopf?</p>
     <div class="chart-card" id="chart-fl-bruecke"></div>
@@ -366,7 +501,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <p class="fl-section-title">F5 – Frequenz und Ebene: Passt das zusammen?</p>
     <div class="chart-card" id="chart-fl-frequenz"></div>
     <div id="fl-alert-f5" class="fl-alert"></div>
-    <p class="hint">Erwartet: FL1 → täglich/wöchentlich · FL2 → zweiwöchentlich/dreiwöchentlich · FL3 → monatlich/quartalsweise. Rot = deutliche Abweichung. Bubbelgröße = Stunden/Monat.</p>
+    <p class="hint">Erwartet: FL1 → täglich/wöchentlich · FL2 → zwei-/dreiwöchentlich · FL3 → monatlich/quartalsweise. Rot = Abweichung. Bubble-Größe = Stunden/Monat.</p>
   </div>
 
   <div id="panel-6" class="panel" data-tab="11">
@@ -376,6 +511,37 @@ textarea#paste-area::placeholder{color:#cbd5e1}
       <h2>KI-Analyse</h2>
       <p>Diese Ausbaustufe ist noch nicht aktiviert.</p>
       <p class="findings-placeholder-sub">Dieser Tab ist für KI-gestützte Mustererkennung vorgesehen. Eine KI analysiert die Datenlage und erkennt Muster, die visuell nicht sofort sichtbar sind – z.&thinsp;B. Redundanzen, strukturelle Engpässe oder auffällige Kommunikationslücken.<br><br>Die Ergebnisse erscheinen hier als kommentierte Befund-Karten. Diese Funktion kann auf Wunsch ergänzt werden.</p>
+    </div>
+  </div>
+
+  <div id="panel-dp" class="panel" data-tab="12">
+    <button class="tab-info-btn" onclick="showTabInfo(12)">ℹ</button>
+
+    <div class="dp-section">
+      <p class="dp-section-title">Abteilungstypen</p>
+      <p class="dp-section-desc">Ordne jeder Abteilung einen funktionalen Typ zu. Verbessert die Flight-Level-Klassifikation signifikant und bereitet die KI-Analyse vor.</p>
+      <div class="dp-dept-grid" id="dp-dept-grid"></div>
+    </div>
+
+    <div class="dp-section">
+      <p class="dp-section-title">Datenqualität</p>
+      <p class="dp-section-desc">Je vollständiger die Daten, desto präziser die Analyse. Hier siehst du, wo Datenpflege den größten Mehrwert schafft.</p>
+      <div class="dp-quality-grid" id="dp-quality-grid"></div>
+    </div>
+
+    <div class="dp-section" id="dp-gruppen-section"></div>
+
+    <div class="dp-section">
+      <p class="dp-section-title">Konfiguration exportieren / importieren</p>
+      <p class="dp-section-desc">Alle manuellen Zuordnungen, Abteilungstypen und Korrekturen als JSON sichern und auf anderen Geräten oder im Team wiederverwenden.</p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn-primary" onclick="exportConfig()">↓ Konfiguration exportieren (.json)</button>
+        <label class="file-upload-label" style="margin:0;cursor:pointer">
+          ↑ Konfiguration importieren (.json)
+          <input type="file" accept=".json" onchange="importConfigFile(this)" style="display:none">
+        </label>
+      </div>
+      <p class="hint" style="margin-top:8px">Enthält: Personenzuordnungen · FK-Markierungen · Abteilungstypen · Flight-Level-Korrekturen · Gruppen-Teilnehmer-Auflösungen</p>
     </div>
   </div>
 
@@ -392,20 +558,28 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 
   <div id="panel-8" class="panel" data-tab="6">
     <button class="tab-info-btn" onclick="showTabInfo(6)">ℹ</button>
+    <div class="toggle-grp" style="margin-bottom:12px">
+      <button id="eng-btn-alle" class="active" onclick="setEngpassMode('alle')">Alle</button>
+      <button id="eng-btn-fk"   onclick="setEngpassMode('fk')">★ Führungskräfte</button>
+      <button id="eng-btn-ma"   onclick="setEngpassMode('ma')">Mitarbeitende</button>
+    </div>
     <div class="chart-card" id="chart-engpass"></div>
-    <p class="hint">Balken = Anzahl Meetings · Blau = als Verantwortliche/r (Kopf, inkl. Vorbereitung) · Grün = als Teilnehmer/in · Hover = Details · Sortiert nach Gesamtlast</p>
-    <div class="chart-card" id="chart-zeitlast" style="margin-top:20px"></div>
+    <p class="hint">Balken = Anzahl Meetings · Blau = als Verantwortliche/r (Kopf) · Grün = als Teilnehmer/in · Sortiert nach Gesamtlast</p>
+    <div id="engpass-expand-bar" style="margin:10px 0"></div>
+    <div class="chart-card" id="chart-zeitlast" style="margin-top:4px"></div>
     <p class="hint" id="hint-zeitlast">Balken = geschätzte Stunden/Monat · Blau = als Verantwortliche/r · Grün = als Teilnehmer/in · Basis: Dauer × monatliche Häufigkeit</p>
   </div>
 
   <div id="panel-9" class="panel" data-tab="7">
     <button class="tab-info-btn" onclick="showTabInfo(7)">ℹ</button>
+    <div id="treemap-briefing"></div>
     <div class="chart-card" id="chart-treemap"></div>
     <p class="hint" id="hint-treemap">Fläche = monatliche Personen-Stunden · Äußerer Rahmen = Kategorie (dunkler) · Innen = Meeting (heller) · Klick = Drill-down</p>
   </div>
 
   <div id="panel-10" class="panel" data-tab="8">
     <button class="tab-info-btn" onclick="showTabInfo(8)">ℹ</button>
+    <div id="wirkung-briefing"></div>
     <div class="chart-card" id="chart-wirkung" style="height:480px"></div>
     <p class="hint">Nur Meetings mit Dauer- UND Wirkungsangabe · Bubble-Größe = Teilnehmerzahl · Farbe = Kategorie · Hover = Details · X-Trennlinie = Median der Zeitlast</p>
   </div>
@@ -424,7 +598,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "04.06.2026 10:00";
+const APP_VERSION = "04.06.2026 23:30";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -539,6 +713,12 @@ let personConfidence   = {};  // { person: { autoDept, score, alternatives } }
 let sankeyRendered     = false;
 let abtRendered        = false;
 let abtMode            = "anzahl"; // "anzahl" | "freq"
+let engpassMode        = "alle";  // "alle" | "fk" | "ma"
+let engpassExpanded    = false;
+const ENGPASS_TOP      = 10;
+
+// Abteilungstypen (aus localStorage, gepflegt im Datenpflege-Tab)
+let deptFunktionen = {};  // { "Vertrieb": "operativ", "Management": "strategisch" }
 
 // Netzwerk: FK-Set (klickbar im Chart togglebar) + Positions-Cache
 let fkSet    = new Set(FK_LIST);   // wird bei neuem Daten-Load auf FK_LIST zurückgesetzt
@@ -589,12 +769,40 @@ function normalizeAlias(raw) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Gruppen-Teilnehmer-Erkennung
+// ══════════════════════════════════════════════════════════════════════════════
+function isGruppenParticipant(name) {
+  if (!name) return false;
+  if (/^[a-zäöü]/.test(name)) return true;                       // Kleinbuchstabe = generisch
+  if (name.length > 30) return true;                             // Zu lang für einen Namen
+  if (allDepts.includes(name)) return true;                      // Passt zu bekanntem Abt.-Namen
+  if (SPECIAL_DEPTS.find(s => s.key === name)) return true;      // Sonderkategorie
+  if (/\balle\b|\bteam\b|\bgruppe\b|\bdept\b/i.test(name)) return true;
+  return false;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Flight Levels – Auto-Klassifikation
 // ══════════════════════════════════════════════════════════════════════════════
 function suggestFlightLevel(m) {
   let s1 = 0, s2 = 0, s3 = 0;
 
-  // Abteilungsübergreifend (stärkstes Signal)
+  // Stärkstes Signal: Abteilungstyp (gepflegt im Datenpflege-Tab)
+  const ownTyp = deptFunktionen[m.abteilung];
+  if (ownTyp === "strategisch")   s3 += 5;
+  if (ownTyp === "koordination")  s2 += 5;
+  if (ownTyp === "operativ")      s1 += 5;
+  // Unterstützend / Extern: kein starkes FL-Signal → neutral
+
+  // Teilnehmer-Abteilungstypen bei übergreifenden Meetings
+  if (m.abteilungsuebergreifend) {
+    const deptTyps = [...new Set(m.teilnehmer.map(t => effectivePersonAbt[t]).filter(Boolean))]
+      .map(abt => deptFunktionen[abt]).filter(Boolean);
+    if (deptTyps.includes("strategisch"))   s3 += 3;
+    if (deptTyps.includes("koordination"))  s2 += 2;
+  }
+
+  // Abteilungsübergreifend (zweitstärkstes Signal wenn kein Typ gesetzt)
   if (m.abteilungsuebergreifend) { s2 += 3; s3 += 1; }
   else { s1 += 3; }
 
@@ -862,8 +1070,10 @@ let MEETINGS = [];
 
 function showStatus(msg, ok) {
   const el = document.getElementById("import-status");
+  if (!el) { console.error("import-status not found:", msg); return; }
   el.textContent = msg;
   el.className = "import-status " + (ok ? "ok" : "err");
+  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function loadFromPaste() {
@@ -872,11 +1082,23 @@ function loadFromPaste() {
   tryLoad(text);
 }
 
+function handleFileDrop(event, el) {
+  event.preventDefault();
+  if (el) el.classList.remove('drag-active');
+  var file = event.dataTransfer && event.dataTransfer.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) { tryLoad(e.target.result); };
+  reader.onerror = function() { showStatus("Datei konnte nicht gelesen werden.", false); };
+  reader.readAsText(file, "UTF-8");
+}
+
 function loadFromFile(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => tryLoad(e.target.result);
+  reader.onload  = e => tryLoad(e.target.result);
+  reader.onerror = () => showStatus("❌ Datei konnte nicht gelesen werden.", false);
   reader.readAsText(file, "UTF-8");
 }
 
@@ -888,7 +1110,17 @@ function tryLoad(text) {
     const abts = new Set(meetings.map(m => m.abteilung)).size;
     showStatus(`✅ ${meetings.length} Meetings erkannt · ${abts} Abteilungen · ${aktive.length} aktiv`, true);
     // Auto-proceed
-    setTimeout(() => showDashboard(), 400);
+    setTimeout(() => {
+      try {
+        showDashboard();
+      } catch(err) {
+        console.error("showDashboard Fehler:", err);
+        // Import-Screen wieder einblenden und Fehler zeigen
+        document.getElementById("import-screen").style.display = "flex";
+        document.getElementById("dashboard").style.display = "none";
+        showStatus("Fehler: " + err.message + " — bitte prüfe die Browser-Konsole (F12) für Details.", false);
+      }
+    }, 400);
   } catch(e) {
     showStatus("Fehler: " + e.message, false);
   }
@@ -939,6 +1171,12 @@ function showDashboard() {
     }
   });
 
+  // Gruppen-Teilnehmer erkennen (nach allDepts + effectivePersonAbt aufgebaut)
+  MEETINGS.forEach(m => {
+    m.gruppenTeilnehmer = m.teilnehmer.filter(isGruppenParticipant);
+    m.hatGruppenTeilnehmer = m.gruppenTeilnehmer.length > 0;
+  });
+
   document.getElementById("import-screen").style.display = "none";
   document.getElementById("dashboard").style.display = "block";
   renderStats();
@@ -966,6 +1204,8 @@ function resetToImport() {
   sankeyRendered = false;
   abtRendered    = false;
   abtMode        = "anzahl";
+  engpassMode    = "alle";
+  engpassExpanded = false;
   document.getElementById("personen-grid").innerHTML = "";
   const pa = document.getElementById("personen-actions");
   if (pa) pa.style.display = "none";
@@ -980,48 +1220,27 @@ const renderedTabs = new Set();
 function renderStats() {
   const m = MEETINGS;
   const aktive = m.filter(x => x.status === "Aktiv");
-  const nOhneInfo = m.filter(x => !x.infofluss).length;
   const nUG    = m.filter(x => x.abteilungsuebergreifend).length;
-  const nEinzel = m.filter(x => /einzelgespräch|1:1|jf/i.test(x.kategorie)).length;
   const nPlatz = m.filter(x => x.ist_platzhalter).length;
-
-  const ohne_info_class = nOhneInfo > 0 ? "stat stat-warn" : "stat";
-  const platz_class = nPlatz > 0 ? "stat stat-warn" : "stat";
-
-  document.getElementById("stats-bar").innerHTML = `
-    <div class="stat"><div class="val">${aktive.length}</div><div class="lbl">Aktive Meetings</div></div>
-    <div class="${ohne_info_class}"><div class="val">${nOhneInfo}</div><div class="lbl">Ohne Infofluss-Doku</div></div>
-    <div class="stat"><div class="val">${nUG}</div><div class="lbl">Abt.übergreifend</div></div>
-    <div class="stat"><div class="val">${nEinzel}</div><div class="lbl">Einzelgespräche</div></div>
-    <div class="${platz_class}"><div class="val">${nPlatz}</div><div class="lbl">⚠ Platzhalter</div></div>
-  `;
+  const nOhneInfo = m.filter(x => !x.infofluss).length;
 
   document.getElementById("header-meta").textContent =
-    `Interaktives Dashboard · Stand: ${new Date().toLocaleDateString("de-DE")} · ${m.length} Meetings`;
+    'Interaktives Dashboard · Stand: ' + new Date().toLocaleDateString("de-DE") + ' · ' + m.length + ' Meetings';
   document.getElementById("footer-text").textContent =
-    `${m.length} Meetings · Stand: ${new Date().toLocaleDateString("de-DE")} · v${APP_VERSION}`;
+    m.length + ' Meetings · Stand: ' + new Date().toLocaleDateString("de-DE") + ' · v' + APP_VERSION;
 
-  // Warnings (collapsible)
-  const warns = [];
-  if (nPlatz) warns.push(`<b>${nPlatz} Meetings</b> mit Platzhalter-Teilnehmern (⚠)`);
-  if (nOhneInfo) warns.push(`<b>${nOhneInfo} Meetings</b> ohne Informationsfluss-Dokumentation`);
-  if (warns.length) {
-    const warnCount = warns.length;
-    const hinweis = warnCount === 1 ? "Hinweis" : "Hinweise";
-    document.getElementById("warnings-bar").innerHTML =
-      `<div class="warnings"><button class="warn-toggle" onclick="toggleWarning()">⚠ ${warnCount} ${hinweis} ▾</button><ul id="warn-list">${warns.map(w=>`<li>${w}</li>`).join("")}</ul></div>`;
-  } else {
-    document.getElementById("warnings-bar").innerHTML = "";
+  // Kompakte Summary im Alle-Meetings-Tab
+  const summaryEl = document.getElementById("table-summary");
+  if (summaryEl) {
+    var parts = [
+      aktive.length + ' aktiv',
+      nUG + ' übergreifend'
+    ];
+    var warns = [];
+    if (nPlatz)   warns.push('<span class="s-warn">⚠ ' + nPlatz + ' Platzhalter</span>');
+    if (nOhneInfo) warns.push('<span class="s-warn">⚠ ' + nOhneInfo + ' ohne Infofluss</span>');
+    summaryEl.innerHTML = parts.map(function(p){ return '<span>' + p + '</span>'; }).join('<span style="color:#e2e8f0">·</span>') + (warns.length ? '<span style="color:#e2e8f0">·</span>' + warns.join('<span style="color:#e2e8f0">·</span>') : '');
   }
-}
-
-function toggleWarning() {
-  const list = document.getElementById("warn-list");
-  const btn = document.querySelector(".warn-toggle");
-  if (!list) return;
-  const open = list.style.display !== "none";
-  list.style.display = open ? "none" : "";
-  if (btn) btn.textContent = btn.textContent.replace(open ? "▾" : "▸", open ? "▸" : "▾");
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1065,17 +1284,21 @@ const TAB_INFO = {
        achten: "Rechts unten = viel Zeit, wenig Wirkung → 'Optimieren'. Links oben = wenig Zeit, hohe Wirkung → 'Bereichernd'. Rechts oben = 'Effizient halten'.",
        folgefragen: "Welche Meetings liegen im Optimieren-Quadranten? Können sie gekürzt, seltener abgehalten oder abgeschafft werden?" },
   9: { title: "Alle Meetings (Tabelle)",
-       was: "Vollständige Datentabelle aller Meetings mit Echtzeit-Suche. Die Wirkungsspalte (●●○○) ist direkt per Klick editierbar.",
+       was: "Vollständige Datentabelle aller Meetings mit Echtzeit-Suche und Filter. Read-only Ansicht – alle Werte kommen aus der Confluence-Quelltabelle.",
        achten: "Meetings ohne Wirkungsbewertung fehlen in der Wirkungsmatrix. Nutze die Suche, um alle Meetings einer Person oder Abteilung zu finden.",
        folgefragen: "Welche Meetings haben noch keine Wirkungsbewertung? Gibt es Meetings, die nicht mehr stattfinden, aber noch als Aktiv geführt sind?" },
   10: { title: "Flight Levels – Kommunikationsfluss-Diagnose",
         was: "Fünf diagnostische Visualisierungen basierend auf dem Flight Levels Framework (Klaus Leopold): Kommunikationspyramide, FL2-Verbindungsmatrix, Wirkungsgrad nach Ebene, Brückenkopf-Heatmap und Frequenz-Level-Matrix.",
-        achten: "FL1 = Operativ (Teamarbeit), FL2 = Koordination (teamübergreifend), FL3 = Strategisch (Portfolio). Fehlende FL2-Meetings sind das häufigste Dysfunktionssignal. Badges mit ~ zeigen auto-klassifizierte Meetings – im Tab 'Alle Meetings' manuell korrigierbar.",
+        achten: "FL1 = Operativ (Teamarbeit), FL2 = Koordination (teamübergreifend), FL3 = Strategisch (Portfolio). Fehlende FL2-Meetings sind das häufigste Dysfunktionssignal. Die FL-Klassifikation erfolgt automatisch über Abteilungstypen (im Konfiguration-Tab pflegbar).",
         folgefragen: "Existiert FL2 wirklich, oder wird koordiniert durch Ad-hoc-Eskalation? Welche Abteilungspaare haben keine strukturierte Koordination? Wer sitzt auf allen drei Ebenen gleichzeitig?" },
   11: { title: "KI-Analyse",
         was: "Reserviert für kommentierte Befunde – erkannte Muster, Redundanzen und Handlungsempfehlungen aus einer KI-gestützten Analyse.",
         achten: "Dieser Tab ist aktuell leer. Sinnvolle Insights erfordern Mustererkennung über die Daten – das ist eine KI-Aufgabe.",
-        folgefragen: "Welche Muster sind in dieser Organisation besonders auffällig? Welche Maßnahmen werden empfohlen?" }
+        folgefragen: "Welche Muster sind in dieser Organisation besonders auffällig? Welche Maßnahmen werden empfohlen?" },
+  12: { title: "Datenpflege",
+        was: "Zentraler Admin-Bereich: Abteilungstypen pflegen, Datenqualität überwachen, Gruppen-Teilnehmer auflösen, Konfiguration exportieren/importieren.",
+        achten: "Abteilungstypen verbessern die Flight-Level-Klassifikation erheblich. Je mehr Felder gepflegt sind (Dauer, Wirkung, Infofluss), desto aussagekräftiger sind die Analyse-Tabs.",
+        folgefragen: "Welche Abteilungen haben noch keinen Typ? Wie viele Meetings haben Gruppen-Platzhalter als Teilnehmer? Ist die Konfiguration gesichert?" }
 };
 
 function showTabInfo(idx) {
@@ -1122,6 +1345,7 @@ function showTab(idx) {
     if (idx === 7) renderTreemap();
     if (idx === 8) renderWirkungsMatrix();
     if (idx === 10) renderFlightLevels();
+    if (idx === 12 && typeof renderDatapflege === 'function') renderDatapflege();
   }
   const pa = document.getElementById("personen-actions");
   if (pa) pa.style.display = idx === 0 ? "flex" : "none";
@@ -1440,80 +1664,118 @@ function renderKalender() {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 3: Überschneidungen (Jaccard Heatmap)
 // ══════════════════════════════════════════════════════════════════════════════
+// Overlap-Daten gecacht damit Heatmap beim Aufklappen ohne Re-Berechnung geht
+var _overlapCache = null;
+
 function renderOverlap() {
-  const ml = MEETINGS.filter(m => m.status === "Aktiv" && m.teilnehmer.length >= 2);
-  const kurz = n => n.length > 22 ? n.slice(0,22)+"…" : n;
-  const namen = ml.map(m => m.name);
-  const namen_kurz = ml.map(m => kurz(m.name));
-  const sets  = ml.map(m => new Set(m.teilnehmer));
+  const ml = MEETINGS.filter(function(m){ return m.status === "Aktiv" && m.teilnehmer.length >= 2; });
+  const kurz = function(n){ return n.length > 22 ? n.slice(0,22)+'…' : n; };
+  const namen = ml.map(function(m){ return m.name; });
+  const sets  = ml.map(function(m){ return new Set(m.teilnehmer); });
   const n = ml.length;
 
+  // Matrix berechnen + cachen
   const matrix=[], hover=[];
-  for (let i=0;i<n;i++) {
-    const mr=[],hr=[];
-    for (let j=0;j<n;j++) {
-      let v;
+  for (var i=0;i<n;i++) {
+    var mr=[],hr=[];
+    for (var j=0;j<n;j++) {
+      var v;
       if (i===j) { v=1.0; }
       else {
-        const inter = [...sets[i]].filter(x => sets[j].has(x));
-        const union = new Set([...sets[i], ...sets[j]]);
+        var inter = [...sets[i]].filter(function(x){ return sets[j].has(x); });
+        var union = new Set([...sets[i], ...sets[j]]);
         v = union.size ? Math.round(inter.length/union.size*100)/100 : 0;
       }
       mr.push(v);
-      const gem = [...sets[i]].filter(x => sets[j].has(x));
-      hr.push(`<b>${namen[i]}</b> ↔ <b>${namen[j]}</b><br>Ähnlichkeit: ${(v*100).toFixed(0)}%<br>Gemeinsam: ${gem.sort().join(", ") || "–"}`);
+      var gem2 = [...sets[i]].filter(function(x){ return sets[j].has(x); });
+      hr.push('<b>'+namen[i]+'</b> ↔ <b>'+namen[j]+'</b><br>Ähnlichkeit: '+(v*100).toFixed(0)+'%<br>Gemeinsam: '+(gem2.sort().join(', ') || '–'));
     }
     matrix.push(mr); hover.push(hr);
   }
+  _overlapCache = { ml, namen, namen_kurz: ml.map(function(m){ return kurz(m.name); }), matrix, hover };
 
-  const trace = {
-    type:"heatmap",
-    z:matrix, x:namen_kurz, y:namen_kurz,
-    text:matrix.map(r => r.map(v => v>0 ? `${(v*100).toFixed(0)}%` : "")),
-    texttemplate:"%{text}", textfont:{size:8, color:"#374151"},
-    colorscale:[[0,"#f0faf8"],[0.25,"#c8e6e0"],[0.55,"#f5c97a"],[0.80,"#e08060"],[1,"#c25050"]],
-    zmin:0, zmax:1,
-    hovertext:hover, hoverinfo:"text",
-    colorbar:{title:{text:"Jaccard<br>Ähnlichkeit"}}
-  };
-  const layout = {
-    title:{text:"Teilnehmer-Überschneidung – Welche Meetings sind ähnlich?",font:{size:16,family:"DM Sans, system-ui, sans-serif"}},
-    font:{family:"DM Sans, system-ui, sans-serif"},
-    height:Math.max(520, ml.length * 22), margin:{l:210,r:100,t:60,b:180},
-    xaxis:{tickangle:-45,tickfont:{size:9}},
-    yaxis:{tickfont:{size:9}}
-  };
-  Plotly.newPlot("chart-overlap", [trace], layout, {responsive:true, displayModeBar:false});
-
-  // ── Top-Paare mit höchster Überschneidung ────────────────────────────────
+  // ── Top-Paare: 2-Spalten-Grid ────────────────────────────────────────────
   const pairs = [];
-  for (let i = 0; i < n; i++) {
-    for (let j = i+1; j < n; j++) {
-      if (matrix[i][j] >= 0.25) {
-        const gem = [...sets[i]].filter(x => sets[j].has(x));
-        pairs.push({ a: namen[i], b: namen[j], score: matrix[i][j], gem });
+  for (var ii = 0; ii < n; ii++) {
+    for (var jj = ii+1; jj < n; jj++) {
+      if (matrix[ii][jj] >= 0.25) {
+        var gem = [...sets[ii]].filter(function(x){ return sets[jj].has(x); });
+        pairs.push({ a: namen[ii], b: namen[jj], score: matrix[ii][jj], gem: gem });
       }
     }
   }
-  pairs.sort((a, b) => b.score - a.score);
+  pairs.sort(function(a, b){ return b.score - a.score; });
   const top = pairs.slice(0, 10);
+
   const topEl = document.getElementById("top-paare-list");
-  if (topEl) topEl.innerHTML = top.length
-    ? `<p style="font-size:.82rem;font-weight:700;color:#374151;margin:0 0 8px">Top-Paare mit höchster Teilnehmer-Überschneidung</p>` +
-      top.map((p, i) => {
-        const badge = p.score >= 0.6
-          ? "background:#fee2e2;color:#c94040" : "background:#fef3c7;color:#92400e";
-        return `<div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid #f1f5f9">
-          <span style="color:#9ca3af;font-size:.75rem;min-width:18px;padding-top:2px">${i+1}.</span>
-          <div>
-            <strong style="font-size:.84rem">${p.a}</strong>
-            <span style="color:#9ca3af;margin:0 4px">↔</span>
-            <strong style="font-size:.84rem">${p.b}</strong>
-            <span style="margin-left:8px;${badge};padding:1px 8px;border-radius:10px;font-size:.74rem">${Math.round(p.score*100)}%</span>
-            <br><span style="font-size:.77rem;color:#6b7280">Gemeinsam: ${p.gem.slice(0,5).join(", ")}${p.gem.length > 5 ? ` +${p.gem.length-5}` : ""}</span>
-          </div></div>`;
-      }).join("")
-    : `<p style="font-size:.84rem;color:#9ca3af">Keine Überschneidungen über 25% gefunden.</p>`;
+  const btn   = document.getElementById("overlap-toggle-btn");
+  if (btn) btn.textContent = '▸ Vollständige Heatmap anzeigen (' + n + ' Meetings × ' + n + ')';
+
+  if (!topEl) return;
+  if (!top.length) {
+    topEl.innerHTML = '<p style="font-size:.84rem;color:#9ca3af">Keine Überschneidungen über 25% gefunden.</p>';
+    return;
+  }
+
+  var pairHTML = function(p, idx) {
+    var badge = p.score >= 0.6 ? 'background:#fee2e2;color:#c94040' : 'background:#fef3c7;color:#92400e';
+    var gemStr = p.gem.slice(0,4).join(', ') + (p.gem.length > 4 ? ' +' + (p.gem.length-4) : '');
+    return '<div class="pair-item">'
+      + '<span class="pair-rank">' + (idx+1) + '.</span>'
+      + '<div class="pair-body">'
+      + '<span class="pair-names"><strong>' + p.a + '</strong>'
+      + '<span style="color:#9ca3af;margin:0 4px">↔</span>'
+      + '<strong>' + p.b + '</strong>'
+      + '<span style="margin-left:6px;' + badge + ';padding:1px 7px;border-radius:10px;font-size:.72rem">' + Math.round(p.score*100) + '%</span></span>'
+      + '<div class="pair-gem">Gemeinsam: ' + gemStr + '</div>'
+      + '</div></div>';
+  };
+
+  var half = Math.ceil(top.length / 2);
+  var left  = top.slice(0, half).map(function(p,i){ return pairHTML(p, i); }).join('');
+  var right = top.slice(half).map(function(p,i){ return pairHTML(p, i+half); }).join('');
+
+  topEl.innerHTML = '<p class="top-paare-title">Top-Paare mit höchster Teilnehmer-Überschneidung</p>'
+    + '<div class="top-paare-grid"><div>' + left + '</div><div>' + right + '</div></div>';
+}
+
+function toggleOverlapHeatmap() {
+  var wrap = document.getElementById("overlap-chart-wrap");
+  var btn  = document.getElementById("overlap-toggle-btn");
+  if (!wrap) return;
+  if (wrap.style.display === "none") {
+    wrap.style.display = "";
+    btn.textContent = "▾ Heatmap ausblenden";
+    btn.classList.add("active");
+    _renderOverlapHeatmap();
+  } else {
+    wrap.style.display = "none";
+    var n = _overlapCache ? _overlapCache.ml.length : 0;
+    btn.textContent = "▸ Vollständige Heatmap anzeigen (" + n + " Meetings × " + n + ")";
+    btn.classList.remove("active");
+  }
+}
+
+function _renderOverlapHeatmap() {
+  if (!_overlapCache) return;
+  var c = _overlapCache;
+  var n = c.ml.length;
+  var trace = {
+    type:"heatmap",
+    z:c.matrix, x:c.namen_kurz, y:c.namen_kurz,
+    text:c.matrix.map(function(r){ return r.map(function(v){ return v>0 ? (v*100).toFixed(0)+'%' : ''; }); }),
+    texttemplate:"%{text}", textfont:{size:8, color:"#374151"},
+    colorscale:[[0,"#f0faf8"],[0.25,"#c8e6e0"],[0.55,"#f5c97a"],[0.80,"#e08060"],[1,"#c25050"]],
+    zmin:0, zmax:1,
+    hovertext:c.hover, hoverinfo:"text",
+    colorbar:{title:{text:"Jaccard"}}
+  };
+  Plotly.newPlot("chart-overlap", [trace], {
+    font:{family:"DM Sans, system-ui, sans-serif"},
+    height:Math.max(520, n * 22), margin:{l:210,r:80,t:20,b:180},
+    xaxis:{tickangle:-45,tickfont:{size:9}},
+    yaxis:{tickfont:{size:9}}
+  }, {responsive:true, displayModeBar:false});
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1665,6 +1927,73 @@ function renderRhythmusChart() {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 5: Informationsfluss (Sankey)
 // ══════════════════════════════════════════════════════════════════════════════
+var _sankeyCache = null;
+
+function toggleChordDiagram() {
+  var wrap = document.getElementById("chord-wrap");
+  var btn  = document.getElementById("chord-toggle-btn");
+  if (!wrap) return;
+  if (wrap.style.display === "none") {
+    wrap.style.display = "";
+    if (btn) { btn.textContent = "▾ Chord-Diagramm ausblenden"; btn.classList.add("active"); }
+    if (_sankeyCache) renderChord(_sankeyCache.flussSymm, _sankeyCache.abtList, _sankeyCache.abtIdx);
+  } else {
+    wrap.style.display = "none";
+    if (btn) { btn.textContent = "▸ Chord-Diagramm anzeigen (kreisförmige Detailansicht)"; btn.classList.remove("active"); }
+  }
+}
+
+function _renderKommunikationBriefing(flussSymm, abtList, vol) {
+  var el = document.getElementById("komm-briefing");
+  if (!el) return;
+  var n = abtList.length;
+  if (n < 2 || !Object.keys(flussSymm).length) { el.innerHTML = ''; return; }
+
+  var maxPairs    = Math.round(n * (n-1) / 2);
+  var activePairs = Object.keys(flussSymm).length;
+  var coverage    = Math.round(activePairs / maxPairs * 100);
+
+  // Zentrum: höchstes Gesamtvolumen
+  var sorted = abtList.slice().sort(function(a,b){ return (vol[b]||0)-(vol[a]||0); });
+  var zentrum = sorted[0];
+  var zentrumConn = Object.keys(flussSymm).filter(function(k){
+    var p = k.split('||'); return p[0]===zentrum || p[1]===zentrum;
+  }).length;
+
+  // Stärkste Achse
+  var pairsSorted = Object.entries(flussSymm).sort(function(a,b){ return b[1]-a[1]; });
+  var starkste = pairsSorted[0];
+  var achseLabel = starkste ? starkste[0].replace('||',' ↔ ') : '–';
+  var achseVal   = starkste ? starkste[1].toFixed(1) : '0';
+
+  // Am wenigsten vernetzt (aber > 0 Verbindungen)
+  var leastIdx = sorted.length-1;
+  var least = sorted[leastIdx];
+  var leastConn = Object.keys(flussSymm).filter(function(k){
+    var p = k.split('||'); return p[0]===least || p[1]===least;
+  }).length;
+
+  el.innerHTML = '<div class="komm-briefing-card">'
+    + '<div class="tbr-header">'
+    + '<span class="tbr-title">Kommunikation – Executive Briefing</span>'
+    + '<span class="tbr-sub">' + n + ' Abteilungen · ' + activePairs + ' von ' + maxPairs + ' möglichen Verbindungen aktiv</span>'
+    + '</div>'
+    + '<div class="komm-insights-grid">'
+    + '<div class="komm-insight"><div class="komm-insight-label">Kommunikationszentrum</div>'
+    + '<div class="komm-insight-value">' + zentrum + '</div>'
+    + '<div class="komm-insight-sub">vernetzt mit ' + zentrumConn + ' Abteilung' + (zentrumConn===1?'':'en') + ' · ' + (vol[zentrum]||0).toFixed(1) + ' Freq.-Punkte</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Stärkste Kommunikationsachse</div>'
+    + '<div class="komm-insight-value">' + achseLabel + '</div>'
+    + '<div class="komm-insight-sub">' + achseVal + ' Freq.-Punkte</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Verbindungsabdeckung</div>'
+    + '<div class="komm-insight-value">' + coverage + '%</div>'
+    + '<div class="komm-insight-sub">' + activePairs + ' von ' + maxPairs + ' möglichen Abt.-Paaren haben gemeinsame Meetings</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Am wenigsten vernetzt</div>'
+    + '<div class="komm-insight-value">' + least + '</div>'
+    + '<div class="komm-insight-sub">' + leastConn + ' direkte Verbindung' + (leastConn===1?'':'en') + '</div></div>'
+    + '</div></div>';
+}
+
 function renderSankey() {
   const aktive = MEETINGS.filter(m => m.status === "Aktiv");
   const hasExtern = aktive.some(m => m.teilnehmer.some(t => t.toLowerCase() === "extern"));
@@ -1757,8 +2086,19 @@ function renderSankey() {
     sankeyEl.on("plotly_unhover", () => Plotly.restyle(sankeyEl, {"link.color":[baseColors]}, [0]));
   }
 
-  // ── Chord-Diagramm (D3) ───────────────────────────────────────────────────
-  renderChord(flussSymm, abtList, abtIdx);
+  // Daten cachen für Chord on-demand + Briefing
+  _sankeyCache = { flussSymm: flussSymm, abtList: abtList, abtIdx: abtIdx };
+  _renderKommunikationBriefing(flussSymm, abtList, vol);
+
+  // Chord-Toggle-Button aktualisieren (Chord bleibt eingeklappt)
+  var chordBar = document.getElementById("chord-expand-bar");
+  if (chordBar) {
+    chordBar.innerHTML = '<button id="chord-toggle-btn" class="overlap-toggle-btn" onclick="toggleChordDiagram()">'
+      + '▸ Chord-Diagramm anzeigen (kreisförmige Detailansicht)</button>';
+  }
+  // Chord-Wrap bei Re-Render schließen und leeren
+  var wrap = document.getElementById("chord-wrap");
+  if (wrap) { wrap.style.display = "none"; document.getElementById("chart-chord").innerHTML = ""; }
 }
 
 function renderChord(flussSymm, abtList, abtIdx) {
@@ -1780,12 +2120,11 @@ function renderChord(flussSymm, abtList, abtIdx) {
     if (i !== undefined && j !== undefined) { matrix[i][j] += v; matrix[j][i] += v; }
   });
 
-  // Größe: 145px Platz für Labels (Gap + längster Name) auf jeder Seite
+  // Labels im Bogen: kein externer Platzbedarf mehr
   const W = Math.max(el.clientWidth - 32, 600);
   const H = Math.max(Math.round(W * 0.72), 450);
-  const labelSpace = 148;
-  const outerR = Math.min(W / 2 - labelSpace, H / 2 - 30);
-  const innerR = outerR - 26;
+  const outerR = Math.min(W / 2 - 24, H / 2 - 24);
+  const innerR = outerR - 34;  // breiterer Ring für lesbare Labels
 
   const chord  = d3.chord().padAngle(0.04).sortSubgroups(d3.descending)(matrix);
   const arc    = d3.arc().innerRadius(innerR).outerRadius(outerR);
@@ -1811,11 +2150,19 @@ function renderChord(flussSymm, abtList, abtIdx) {
 
   const svg = d3.select(el).append("svg")
     .attr("width", W).attr("height", H)
-    .style("font-family","DM Sans, system-ui, sans-serif")
-    .style("overflow","visible"); // Labels dürfen leicht über SVG-Rand hinaus
+    .style("font-family","DM Sans, system-ui, sans-serif");
+
+  // Pfad-Definitionen für Bogen-Labels (textPath)
+  const midR = (innerR + outerR) / 2;
+  const defs = svg.append("defs");
+
+  // Hilfsfunktion: D3-Winkel → SVG-Koordinaten (0 = oben, clockwise)
+  const toXY = function(r, a) {
+    return [r * Math.sin(a), -r * Math.cos(a)];
+  };
 
   const root = svg.append("g")
-    .attr("transform", `translate(${W/2},${H/2})`);
+    .attr("transform", "translate(" + (W/2) + "," + (H/2) + ")");
 
   // ── Bänder mit Hover-Highlight ────────────────────────────────────────────
   const ribbonG = root.append("g");
@@ -1861,18 +2208,47 @@ function renderChord(flussSymm, abtList, abtIdx) {
       hideTip();
     });
 
-  g.append("text")
-    .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
-    .attr("dy","0.35em")
-    .attr("transform", d => [
-      `rotate(${d.angle * 180 / Math.PI - 90})`,
-      `translate(${outerR + 14})`,
-      d.angle > Math.PI ? "rotate(180)" : ""
-    ].join(""))
-    .attr("text-anchor", d => d.angle > Math.PI ? "end" : "start")
-    .attr("font-size","12px").attr("fill","#374151")
+  // Bogen-Pfade für Labels in defs registrieren
+  chord.groups.forEach(function(d) {
+    var midAngle = (d.startAngle + d.endAngle) / 2;
+    // Bögen von π/2 bis 3π/2 umkehren (rechte + untere + linke Seite)
+    // → Text läuft immer von links nach rechts, nie auf dem Kopf
+    var bottomHalf = midAngle > Math.PI / 2 && midAngle < Math.PI * 1.5;
+    var sa = bottomHalf ? d.endAngle   : d.startAngle;
+    var ea = bottomHalf ? d.startAngle : d.endAngle;
+    var p1 = toXY(midR, sa);
+    var p2 = toXY(midR, ea);
+    var span = Math.abs(ea - sa);
+    var largeArc = span > Math.PI ? 1 : 0;
+    var sweep    = bottomHalf ? 0 : 1;
+    defs.append("path")
+      .attr("id", "chord-arc-" + d.index)
+      .attr("d", "M " + p1[0].toFixed(2) + " " + p1[1].toFixed(2) +
+                 " A " + midR.toFixed(2) + " " + midR.toFixed(2) +
+                 " 0 " + largeArc + " " + sweep +
+                 " " + p2[0].toFixed(2) + " " + p2[1].toFixed(2));
+  });
+
+  // Labels entlang des Bogens (textPath)
+  root.append("g").selectAll("text")
+    .data(chord.groups).join("text")
     .style("pointer-events","none")
-    .text(d => abtList[d.index]);
+    .each(function(d) {
+      var arcLen = (d.endAngle - d.startAngle) * midR;
+      var name   = abtList[d.index];
+      var maxChars = Math.floor(arcLen / 7.5);
+      var label  = arcLen < 28 ? "" : (maxChars < name.length ? name.slice(0, Math.max(maxChars - 1, 1)) + "…" : name);
+      if (!label) return;
+      d3.select(this).append("textPath")
+        .attr("href", "#chord-arc-" + d.index)
+        .attr("startOffset","50%")
+        .attr("text-anchor","middle")
+        .attr("dominant-baseline","central")
+        .attr("font-size","11px")
+        .attr("font-weight","600")
+        .attr("fill","white")
+        .text(label);
+    });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1891,27 +2267,22 @@ function renderTable() {
     const learning = m.learning || "–";
     const platzh = m.ist_platzhalter
       ? ' <span class="platzh-badge">⚠ Platzhalter</span>' : "";
+    const grupBadge = (m.hatGruppenTeilnehmer && m.gruppenTeilnehmer && m.gruppenTeilnehmer.length > 0)
+      ? ` <span title="Gruppen-Teilnehmer: ${m.gruppenTeilnehmer.join(', ')}" style="color:#d97706;cursor:help;font-size:.85rem">⚑</span>` : "";
     const wertDisplay = m.wert
       ? '●'.repeat(m.wert) + '○'.repeat(4 - m.wert)
       : '–';
-    const flCls = m.flugebene
-      ? `fl-badge fl-badge-${m.flugebene.toLowerCase()}${m.flugebeneAuto ? ' fl-badge-auto' : ''}`
-      : '';
-    const flDisplay = m.flugebene
-      ? `<span class="${flCls}">${m.flugebeneAuto ? '~' : ''}${m.flugebene}</span>`
-      : '<span style="color:#c0ccc9">–</span>';
     const tr = document.createElement("tr");
     tr.setAttribute("data-abt", m.abteilung);
     tr.setAttribute("data-vera", vera);
     tr.setAttribute("data-teiln", teilnStr);
     tr.innerHTML = `
       <td><span class="abt-badge" style="background:${abtCol}22;color:${abtCol};border:1px solid ${abtCol}55">${m.abteilung}</span></td>
-      <td class="meeting-name">${m.name}${platzh}</td>
+      <td class="meeting-name">${m.name}${platzh}${grupBadge}</td>
       <td><span class="kat-pill">${m.kategorie}</span></td>
       <td><span class="rhy-dot" style="background:${RHY_FARBEN[m.rhythmus_klasse]||'#9ca3af'}"></span>${m.rhythmus_klasse}</td>
       <td style="text-align:right;color:${m.dauer?'inherit':'#c0ccc9'}">${m.dauer ? m.dauer+'′' : '–'}</td>
-      <td class="fl-cell" data-idx="${idx}" title="Klicken zum Bearbeiten" style="text-align:center;cursor:pointer">${flDisplay}</td>
-      <td class="wert-cell" data-idx="${idx}" title="Klicken zum Bearbeiten" style="text-align:center;cursor:pointer;letter-spacing:1px;color:${m.wert?'#59B2A5':'#c0ccc9'}">${wertDisplay}</td>
+      <td style="text-align:center;letter-spacing:1px;color:${m.wert?'#59B2A5':'#c0ccc9'}">${wertDisplay}</td>
       <td>${vera}</td>
       <td class="teiln-cell">${teilnStr}</td>
       <td><span class="badge ${statusCls}">${m.status}</span></td>
@@ -1924,37 +2295,7 @@ function renderTable() {
   updateTableCount();
 }
 
-function handleWertClick(e) {
-  const td = e.target.closest(".wert-cell");
-  if (!td) return;
-  if (td.querySelector("select")) return; // bereits offen
-  const idx = parseInt(td.dataset.idx, 10);
-  const m = MEETINGS[idx];
-  const sel = document.createElement("select");
-  sel.style.cssText = "font-size:0.85em;border:1px solid #59B2A5;border-radius:4px;padding:1px 2px;background:#fff;color:#1a2e2b;cursor:pointer";
-  [["–", ""], ["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"]].forEach(([label, val]) => {
-    const opt = document.createElement("option");
-    opt.value = val;
-    opt.textContent = label;
-    if ((m.wert != null ? String(m.wert) : "") === val) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  td.textContent = "";
-  td.appendChild(sel);
-  sel.focus();
-  const commit = () => {
-    const newVal = sel.value === "" ? null : parseInt(sel.value, 10);
-    m.wert = newVal;
-    const wertDisplay = m.wert ? '●'.repeat(m.wert) + '○'.repeat(4 - m.wert) : '–';
-    td.textContent = wertDisplay;
-    td.style.color = m.wert ? '#59B2A5' : '#c0ccc9';
-    saveConfig();
-  };
-  sel.addEventListener("change", commit);
-  sel.addEventListener("blur", () => { if (td.contains(sel)) commit(); });
-}
-
-document.addEventListener("click", handleWertClick);
+// Wirkung ist read-only – kommt aus Confluence-Quelltabelle (kein Override im Tool)
 
 function handleFlightLevelClick(e) {
   const td = e.target.closest(".fl-cell");
@@ -2104,10 +2445,10 @@ function renderPersonenTab() {
 
   const diagLines = [];
   if (_filtered.length) {
-    diagLines.push(`<b>Herausgefiltert (generische Beschreibungen):</b> ${_filtered.map(p => `„${p}"`).join(", ")}`);
+    diagLines.push('<b>Herausgefiltert (generische Beschreibungen):<\/b> ' + _filtered.map(function(p){return '„'+p+'“';}).join(", "));
   }
   if (_noDept.length) {
-    diagLines.push(`<b>Keine Abteilung erkannt (unsichtbar):</b> ${_noDept.map(p => `„${p}"`).join(", ")}`);
+    diagLines.push('<b>Keine Abteilung erkannt (unsichtbar):<\/b> ' + _noDept.map(function(p){return '„'+p+'"';}).join(", "));
   }
 
   if (diagLines.length) {
@@ -2285,6 +2626,21 @@ function assignPerson(person, newDept) {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 9: Engpass-Karte (D3)
 // ══════════════════════════════════════════════════════════════════════════════
+function setEngpassMode(mode) {
+  engpassMode = mode;
+  engpassExpanded = false; // beim Moduswechsel zurück auf Top-10
+  ['alle','fk','ma'].forEach(m => {
+    const btn = document.getElementById('eng-btn-' + m);
+    if (btn) btn.classList.toggle('active', m === mode);
+  });
+  renderEngpass();
+}
+
+function toggleEngpassExpand() {
+  engpassExpanded = !engpassExpanded;
+  renderEngpass();
+}
+
 function renderEngpass() {
   if (!MEETINGS.length) return;
 
@@ -2300,34 +2656,53 @@ function renderEngpass() {
     });
   });
 
-  // Alle Personen sammeln, nach Gesamtlast absteigend sortieren
+  // Alle Personen sammeln, nach FK-Mode filtern, nach Gesamtlast sortieren
   const allP = new Set([...Object.keys(kopfCount), ...Object.keys(teilnCount)]);
-  const persons = [...allP].sort((a, b) =>
+  let persons = [...allP];
+  if (engpassMode === 'fk') persons = persons.filter(p => fkSet.has(p));
+  if (engpassMode === 'ma') persons = persons.filter(p => !fkSet.has(p));
+  persons.sort((a, b) =>
     ((kopfCount[b]||0) + (teilnCount[b]||0)) - ((kopfCount[a]||0) + (teilnCount[a]||0))
   );
 
-  const HEIGHT = Math.max(420, persons.length * 26 + 140);
+  const totalPersons = persons.length;
+  const display = engpassExpanded ? persons : persons.slice(0, ENGPASS_TOP);
+
+  // Toggle-Button aktualisieren
+  const expandBar = document.getElementById("engpass-expand-bar");
+  if (expandBar) {
+    if (totalPersons > ENGPASS_TOP) {
+      const rest = totalPersons - ENGPASS_TOP;
+      expandBar.innerHTML = '<button class="overlap-toggle-btn" onclick="toggleEngpassExpand()">'
+        + (engpassExpanded ? '▾ Nur Top ' + ENGPASS_TOP + ' anzeigen' : '▸ Alle ' + totalPersons + ' anzeigen (' + rest + ' weitere)')
+        + '</button>';
+    } else {
+      expandBar.innerHTML = '';
+    }
+  }
+
+  const HEIGHT = Math.max(280, display.length * 26 + 120);
 
   Plotly.newPlot("chart-engpass", [
     {
       type: "bar", orientation: "h",
       name: "als Verantwortliche/r (Kopf)",
-      y: persons,
-      x: persons.map(p => kopfCount[p] || 0),
+      y: display,
+      x: display.map(p => kopfCount[p] || 0),
       marker: { color: "#2176ae" },
       hovertemplate: "<b>%{y}</b><br>%{x} Meetings als Verantwortliche/r<extra></extra>"
     },
     {
       type: "bar", orientation: "h",
       name: "als Teilnehmer/in",
-      y: persons,
-      x: persons.map(p => teilnCount[p] || 0),
+      y: display,
+      x: display.map(p => teilnCount[p] || 0),
       marker: { color: "#59B2A5" },
       hovertemplate: "<b>%{y}</b><br>%{x} Meetings als Teilnehmer/in<extra></extra>"
     }
   ], {
     barmode: "group",
-    title: { text: "Meeting-Last pro Person", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
+    title: { text: "Meeting-Last pro Person" + (engpassExpanded ? "" : " (Top " + ENGPASS_TOP + ")"), font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
     font: { family: "DM Sans, system-ui, sans-serif" },
     xaxis: { title: "Anzahl Meetings", showgrid: true, gridcolor: "#f3f4f6", dtick: 1 },
     yaxis: { autorange: "reversed", automargin: true },
@@ -2373,13 +2748,18 @@ function renderZeitlast() {
   }
 
   const allP = new Set([...Object.keys(kopfMin), ...Object.keys(teilnMin)]);
-  const persons = [...allP].sort((a, b) =>
+  let persons = [...allP];
+  if (engpassMode === 'fk') persons = persons.filter(p => fkSet.has(p));
+  if (engpassMode === 'ma') persons = persons.filter(p => !fkSet.has(p));
+  persons.sort((a, b) =>
     ((kopfMin[b]||0) + (teilnMin[b]||0)) - ((kopfMin[a]||0) + (teilnMin[a]||0))
   );
 
+  const displayZ = engpassExpanded ? persons : persons.slice(0, ENGPASS_TOP);
+
   // Minuten → Stunden, auf 1 Stelle runden
   const toH = min => Math.round(min / 60 * 10) / 10;
-  const HEIGHT = Math.max(420, persons.length * 26 + 140);
+  const HEIGHT = Math.max(280, displayZ.length * 26 + 120);
 
   const suffix = missingDauer > 0
     ? ` (${missingDauer} Meeting${missingDauer>1?"s":""} ohne Dauer-Angabe nicht berücksichtigt)`
@@ -2391,16 +2771,16 @@ function renderZeitlast() {
     {
       type: "bar", orientation: "h",
       name: "als Verantwortliche/r (Kopf)",
-      y: persons,
-      x: persons.map(p => toH(kopfMin[p] || 0)),
+      y: displayZ,
+      x: displayZ.map(p => toH(kopfMin[p] || 0)),
       marker: { color: "#2176ae" },
       hovertemplate: "<b>%{y}</b><br>%{x} h/Monat als Verantwortliche/r<extra></extra>"
     },
     {
       type: "bar", orientation: "h",
       name: "als Teilnehmer/in",
-      y: persons,
-      x: persons.map(p => toH(teilnMin[p] || 0)),
+      y: displayZ,
+      x: displayZ.map(p => toH(teilnMin[p] || 0)),
       marker: { color: "#59B2A5" },
       hovertemplate: "<b>%{y}</b><br>%{x} h/Monat als Teilnehmer/in<extra></extra>"
     }
@@ -2420,6 +2800,54 @@ function renderZeitlast() {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 10: Zeitverteilung – Treemap (A2)
 // ══════════════════════════════════════════════════════════════════════════════
+function _renderTreemapBriefing(withHours) {
+  var el = document.getElementById("treemap-briefing");
+  if (!el) return;
+  if (!withHours || withHours.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  var sorted = withHours.slice().sort(function(a,b){ return b.mH - a.mH; });
+  var totalH = sorted.reduce(function(s,x){ return s + x.mH; }, 0);
+  var TOP = 5;
+  var top = sorted.slice(0, TOP);
+  var topH = top.reduce(function(s,x){ return s + x.mH; }, 0);
+  var topPct = totalH > 0 ? Math.round(topH / totalH * 100) : 0;
+  var fkMeetings = top.filter(function(x){ return x.m.teilnehmer.some(function(t){ return fkSet.has(t); }); }).length;
+
+  var rows = top.map(function(x, i) {
+    var m = x.m;
+    var fkCount = m.teilnehmer.filter(function(t){ return fkSet.has(t); }).length;
+    var farbe = effectiveAbtFarben[m.abteilung] || '#9ca3af';
+    var pct = totalH > 0 ? Math.round(x.mH / totalH * 100) : 0;
+    var name = m.name.length > 32 ? m.name.slice(0, 31) + '…' : m.name;
+    return '<div class="tbr-row">'
+      + '<span class="tbr-rank">' + (i+1) + '.</span>'
+      + '<div class="tbr-body">'
+      + '<span class="tbr-name" title="' + m.name + '">' + name + '</span>'
+      + '<span class="abt-badge" style="font-size:.68rem;padding:1px 5px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + m.abteilung + '</span>'
+      + '<span class="tbr-cost">' + x.mH.toFixed(1) + ' h/Mo</span>'
+      + '<span class="tbr-pers">' + m.teilnehmer.length + ' Pers. · ' + pct + '%</span>'
+      + (fkCount > 0 ? '<span class="tbr-fk">★ ' + fkCount + ' FK' + (fkCount > 1 ? 's' : '') + '</span>' : '')
+      + '</div></div>';
+  }).join('');
+
+  var insight = '';
+  if (fkMeetings > 0) {
+    insight += '<span class="tbr-insight-item" style="color:#d97706">★ ' + fkMeetings + ' dieser Meetings haben FK-Beteiligung – tatsächlicher Kostenfaktor höher</span>';
+  }
+
+  el.innerHTML = '<div class="treemap-briefing">'
+    + '<div class="tbr-header">'
+    + '<span class="tbr-title">Zeitaufwand – Executive Briefing</span>'
+    + '<span class="tbr-sub">Gesamtaufwand: ' + totalH.toFixed(1) + ' h/Mo · Top-' + TOP + ' = ' + topPct + '% der Gesamtzeit</span>'
+    + '</div>'
+    + rows
+    + (insight ? '<div class="tbr-insight">' + insight + '</div>' : '')
+    + '</div>';
+}
+
 function renderTreemap() {
   if (!MEETINGS.length) return;
 
@@ -2435,6 +2863,9 @@ function renderTreemap() {
     const mH     = toH(m.dauer * freq * nPers);
     withHours.push({ m, mH });
   });
+
+  // Executive Briefing befüllen (auch wenn withHours leer)
+  _renderTreemapBriefing(withHours);
 
   // Noch keine Dauer-Daten → Hinweis
   if (withHours.length === 0) {
@@ -2528,93 +2959,486 @@ function renderWirkungsMatrix() {
   const el = document.getElementById("chart-wirkung");
   if (!el) return;
 
-  const data = MEETINGS.filter(m => m.dauer !== null && m.wert !== null && !m.ist_platzhalter);
+  const data = MEETINGS.filter(function(m){ return m.dauer !== null && m.wert !== null && !m.ist_platzhalter; });
 
   if (!data.length) {
-    el.innerHTML = `<div style="padding:40px;text-align:center;color:#9ca3af;font-size:.9rem">
-      Noch keine Meetings mit Dauer- UND Wirkungsangabe vorhanden.<br>
-      Wirkung kann in Tab „Alle Meetings" per Klick eingetragen werden.
-    </div>`;
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af;font-size:.9rem">'
+      + 'Noch keine Meetings mit Dauer- UND Wirkungsangabe vorhanden.</div>';
+    _renderWirkungsBriefing([], [], 0);
     return;
   }
 
   // X = Stunden/Monat
-  const xVals = data.map(m => Math.round(m.dauer * (FREQ_MONTHLY[m.rhythmus_klasse] || 0.5) / 60 * 100) / 100);
+  const xVals = data.map(function(m){ return Math.round(m.dauer * (FREQ_MONTHLY[m.rhythmus_klasse] || 0.5) / 60 * 100) / 100; });
 
   // Median für X-Trennlinie
-  const sorted = [...xVals].sort((a, b) => a - b);
-  const xMedian = sorted.length % 2 === 0
-    ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-    : sorted[Math.floor(sorted.length / 2)];
+  const sortedX = xVals.slice().sort(function(a,b){ return a-b; });
+  const xMedian = sortedX.length % 2 === 0
+    ? (sortedX[sortedX.length/2-1] + sortedX[sortedX.length/2]) / 2
+    : sortedX[Math.floor(sortedX.length/2)];
+
+  // Y-Jitter: Meetings mit gleichem Wert vertikal spreizen (±0.22 max)
+  const wertGroups = {};
+  data.forEach(function(m, i) {
+    var w = m.wert;
+    if (!wertGroups[w]) wertGroups[w] = [];
+    wertGroups[w].push(i);
+  });
+  const yJitter = new Array(data.length).fill(0);
+  Object.values(wertGroups).forEach(function(indices) {
+    var count = indices.length;
+    if (count <= 1) return;
+    var spread = Math.min(0.22, count * 0.055);
+    indices.forEach(function(idx, pos) {
+      yJitter[idx] = (count === 1) ? 0 : (pos / (count - 1) - 0.5) * spread * 2;
+    });
+  });
 
   // Kategorien + Farben
-  const katList = [...new Set(data.map(m => m.kategorie || "Sonstige"))].sort();
+  const katList = [...new Set(data.map(function(m){ return m.kategorie || "Sonstige"; }))].sort();
   const katColor = {};
-  katList.forEach((k, i) => { katColor[k] = PALETTE[i % PALETTE.length]; });
+  katList.forEach(function(k, i){ katColor[k] = PALETTE[i % PALETTE.length]; });
 
-  // Einen Trace pro Kategorie (für Legende)
-  const traces = katList.map(kat => {
-    const items = data.map((m, i) => ({ m, x: xVals[i] })).filter(({m}) => (m.kategorie || "Sonstige") === kat);
+  const dataWithIdx = data.map(function(m, i){ return { m: m, i: i, x: xVals[i] }; });
+
+  const traces = katList.map(function(kat) {
+    const items = dataWithIdx.filter(function(d){ return (d.m.kategorie || "Sonstige") === kat; });
     return {
-      type: "scatter",
-      mode: "markers",
-      name: kat,
-      x: items.map(({x}) => x),
-      y: items.map(({m}) => m.wert),
-      text: items.map(({m, x}) =>
-        `<b>${m.name}</b><br>Abteilung: ${m.abteilung}<br>Kategorie: ${m.kategorie}<br>` +
-        `Rhythmus: ${m.rhythmus_klasse}<br>Dauer: ${m.dauer} min<br>` +
-        `Zeit/Monat: ${x} h<br>Wirkung: ${'●'.repeat(m.wert)}${'○'.repeat(4 - m.wert)}<br>` +
-        `Teilnehmer: ${m.teilnehmer.length || 1}`
-      ),
+      type: "scatter", mode: "markers", name: kat,
+      x: items.map(function(d){ return d.x; }),
+      y: items.map(function(d){ return d.m.wert + yJitter[d.i]; }),
+      text: items.map(function(d) {
+        var m = d.m;
+        return '<b>' + m.name + '</b><br>Abteilung: ' + m.abteilung
+          + '<br>Kategorie: ' + m.kategorie
+          + '<br>Rhythmus: ' + m.rhythmus_klasse
+          + '<br>Dauer: ' + m.dauer + ' min'
+          + '<br>Zeit/Monat: ' + d.x + ' h'
+          + '<br>Wirkung: ' + '●'.repeat(m.wert) + '○'.repeat(4-m.wert)
+          + '<br>Teilnehmer: ' + (m.teilnehmer.length || 1);
+      }),
       hovertemplate: "%{text}<extra></extra>",
       marker: {
         color: katColor[kat],
-        size: items.map(({m}) => Math.max(m.teilnehmer.length || 1, 1) * 6 + 8),
+        size: items.map(function(d){ return Math.max(d.m.teilnehmer.length || 1, 1) * 6 + 8; }),
         opacity: 0.82
       }
     };
   });
 
-  const xMax = Math.max(...xVals) * 1.15 || 10;
+  const xMax = Math.max.apply(null, xVals) * 1.15 || 10;
 
-  // Quadranten-Labels
   const annotations = [
-    { x: xMedian / 2,           y: 3.6, text: "Bereichernd",     font: { color: "#059669", size: 11 } },
-    { x: (xMedian + xMax) / 2,  y: 3.6, text: "Effizient halten",font: { color: "#2563eb", size: 11 } },
-    { x: xMedian / 2,           y: 1.4, text: "Hinterfragen",    font: { color: "#9ca3af", size: 11 } },
-    { x: (xMedian + xMax) / 2,  y: 1.4, text: "Optimieren",      font: { color: "#dc2626", size: 11 } },
-  ].map(a => ({
-    ...a, xref: "x", yref: "y", showarrow: false,
-    font: { ...a.font, family: "inherit" }, opacity: 0.6
-  }));
+    { x: xMedian/2,          y: 3.6, text: "Bereichernd",     font: { color: "#059669", size: 11 } },
+    { x: (xMedian+xMax)/2,   y: 3.6, text: "Effizient halten",font: { color: "#2563eb", size: 11 } },
+    { x: xMedian/2,          y: 1.4, text: "Hinterfragen",    font: { color: "#9ca3af", size: 11 } },
+    { x: (xMedian+xMax)/2,   y: 1.4, text: "Optimieren",      font: { color: "#dc2626", size: 11 } },
+  ].map(function(a){ return Object.assign({}, a, { xref:"x", yref:"y", showarrow:false, font: Object.assign({}, a.font, {family:"inherit"}), opacity:0.6 }); });
 
   const shapes = [
-    // vertikale Trennlinie (Median)
-    { type: "line", x0: xMedian, x1: xMedian, y0: 0.5, y1: 4.5,
-      line: { color: "#cbd5e1", width: 1.5, dash: "dot" }, xref: "x", yref: "y" },
-    // horizontale Trennlinie (y=2.5)
-    { type: "line", x0: 0, x1: xMax, y0: 2.5, y1: 2.5,
-      line: { color: "#cbd5e1", width: 1.5, dash: "dot" }, xref: "x", yref: "y" },
+    // Quadrant-Hintergründe (subtile Füllung)
+    { type:"rect", x0:0,       x1:xMedian, y0:2.5, y1:4.5, fillcolor:"rgba(5,150,105,0.05)",  line:{width:0}, xref:"x", yref:"y" },
+    { type:"rect", x0:xMedian, x1:xMax,    y0:2.5, y1:4.5, fillcolor:"rgba(37,99,235,0.05)",  line:{width:0}, xref:"x", yref:"y" },
+    { type:"rect", x0:0,       x1:xMedian, y0:0.5, y1:2.5, fillcolor:"rgba(100,116,139,0.04)",line:{width:0}, xref:"x", yref:"y" },
+    { type:"rect", x0:xMedian, x1:xMax,    y0:0.5, y1:2.5, fillcolor:"rgba(220,38,38,0.07)",  line:{width:0}, xref:"x", yref:"y" },
+    // Trennlinien
+    { type:"line", x0:xMedian, x1:xMedian, y0:0.5, y1:4.5, line:{color:"#cbd5e1",width:1.5,dash:"dot"}, xref:"x", yref:"y" },
+    { type:"line", x0:0,       x1:xMax,    y0:2.5, y1:2.5, line:{color:"#cbd5e1",width:1.5,dash:"dot"}, xref:"x", yref:"y" },
   ];
 
   Plotly.react(el, traces, {
     margin: { t: 64, r: 24, b: 56, l: 56 },
     xaxis: { title: "Zeitaufwand h/Monat", zeroline: false, gridcolor: "#f1f5f9", range: [0, xMax] },
     yaxis: { title: "Wirkung", tickvals: [1,2,3,4], ticktext: ["1","2","3","4"], range: [0.5, 4.5], gridcolor: "#f1f5f9" },
-    shapes,
-    annotations,
+    shapes, annotations,
     legend: { orientation: "h", y: 1.08, x: 0.5, xanchor: "center" },
-    plot_bgcolor: "#fff",
-    paper_bgcolor: "#fff",
+    plot_bgcolor: "#fff", paper_bgcolor: "#fff",
     font: { family: "Inter, system-ui, sans-serif", size: 12, color: "#374151" },
     hovermode: "closest"
   }, { responsive: true, displayModeBar: false });
+
+  _renderWirkungsBriefing(data, xVals, xMedian);
 }
 
+function _renderWirkungsBriefing(data, xVals, xMedian) {
+  var el = document.getElementById("wirkung-briefing");
+  if (!el) return;
+  if (!data.length) { el.innerHTML = ''; return; }
+
+  var total = MEETINGS.filter(function(m){ return m.dauer !== null && !m.ist_platzhalter; }).length;
+  var bewertet = data.length;
+  var ohneWert = total - bewertet;
+
+  // Quadrant-Zuweisung
+  var optimieren  = [], hinterfragen = [];
+  data.forEach(function(m, i) {
+    var x = xVals[i];
+    if (m.wert <= 2) {
+      if (x > xMedian) optimieren.push({ m: m, x: x });
+      else             hinterfragen.push({ m: m, x: x });
+    }
+  });
+
+  // Optimieren nach Dringlichkeit sortieren: höchste Zeit × niedrigste Wirkung
+  optimieren.sort(function(a,b){ return (b.x * (3-b.m.wert)) - (a.x * (3-a.m.wert)); });
+  hinterfragen.sort(function(a,b){ return a.m.wert - b.m.wert || b.x - a.x; });
+
+  var topOpt = optimieren.slice(0, 4);
+
+  // Kein Handlungsbedarf
+  if (!optimieren.length && !hinterfragen.length) {
+    el.innerHTML = '<div class="treemap-briefing">'
+      + '<div class="tbr-header"><span class="tbr-title">Wirkung – Executive Briefing</span>'
+      + '<span class="tbr-sub">' + bewertet + ' Meetings bewertet' + (ohneWert ? ' · ' + ohneWert + ' noch ohne Wirkungsangabe' : '') + '</span></div>'
+      + '<div style="color:#059669;font-size:.84rem;padding:6px 0">✓ Alle bewerteten Meetings haben Wirkung ≥ 3 – kein akuter Handlungsbedarf erkennbar.</div>'
+      + '</div>';
+    return;
+  }
+
+  var optRows = topOpt.map(function(item, i) {
+    var m = item.m;
+    var fkCount = m.teilnehmer.filter(function(t){ return fkSet.has(t); }).length;
+    var name = m.name.length > 36 ? m.name.slice(0,35)+'…' : m.name;
+    var farbe = effectiveAbtFarben[m.abteilung] || '#9ca3af';
+    return '<div class="tbr-row">'
+      + '<span class="tbr-rank">' + (i+1) + '.</span>'
+      + '<div class="tbr-body">'
+      + '<span class="tbr-name" title="' + m.name + '">' + name + '</span>'
+      + '<span class="abt-badge" style="font-size:.68rem;padding:1px 5px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + m.abteilung + '</span>'
+      + '<span class="tbr-cost" style="color:#dc2626">' + item.x.toFixed(1) + ' h/Mo</span>'
+      + '<span class="tbr-pers">' + '●'.repeat(m.wert) + '○'.repeat(4-m.wert) + '</span>'
+      + (fkCount > 0 ? '<span class="tbr-fk">★ ' + fkCount + ' FK' + (fkCount>1?'s':'') + '</span>' : '')
+      + '</div></div>';
+  }).join('');
+
+  var moreOpt = optimieren.length > 4 ? '<div style="font-size:.75rem;color:#9ca3af;padding:2px 0 0 24px">+ ' + (optimieren.length-4) + ' weitere</div>' : '';
+
+  var hintLine = hinterfragen.length
+    ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9;font-size:.78rem;color:#6b7280">'
+      + '<span style="font-weight:600;color:#6b7280">? Hinterfragen (' + hinterfragen.length + ')</span>'
+      + ' – geringer Zeitaufwand, aber Wirkung ≤ 2: '
+      + hinterfragen.slice(0,3).map(function(d){ return d.m.name.length>22 ? d.m.name.slice(0,21)+'…' : d.m.name; }).join(', ')
+      + (hinterfragen.length > 3 ? ' +' + (hinterfragen.length-3) + ' weitere' : '')
+      + '</div>'
+    : '';
+
+  el.innerHTML = '<div class="treemap-briefing">'
+    + '<div class="tbr-header">'
+    + '<span class="tbr-title">Wirkung – Executive Briefing</span>'
+    + '<span class="tbr-sub">' + bewertet + ' Meetings bewertet' + (ohneWert ? ' · ' + ohneWert + ' noch ohne Wirkungsangabe' : '') + '</span>'
+    + '</div>'
+    + (optimieren.length ? '<div style="font-size:.75rem;font-weight:700;color:#dc2626;margin-bottom:4px">⚠ OPTIMIEREN (' + optimieren.length + ') – hoher Zeitaufwand, Wirkung ≤ 2</div>'
+        + optRows + moreOpt : '')
+    + hintLine
+    + '</div>';
+}
+
+// ── Datenpflege-Funktionen in separatem Block (Safari-Kompatibilität) ─────────
+</script>
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 12: Datenpflege – Abteilungstypen, Datenqualität, Gruppen-Teilnehmer
+// ══════════════════════════════════════════════════════════════════════════════
+const DEPT_TYP_OPTS = [
+  { val: "",             label: "— Kein Typ gesetzt —",      hint: "",          color: "#9ca3af" },
+  { val: "strategisch",  label: "Strategisch / Führung",     hint: "→ FL3",     color: "#7c6bab" },
+  { val: "koordination", label: "Koordination / Steuerung",  hint: "→ FL2",     color: "#2176ae" },
+  { val: "operativ",     label: "Operativ / Delivery",       hint: "→ FL1",     color: "#59B2A5" },
+  { val: "unterstützend",label: "Unterstützend",             hint: "HR, Finance …", color: "#d4a843" },
+  { val: "extern",       label: "Extern / Partner",          hint: "",          color: "#6b7280" },
+];
+
+function renderDatapflege() {
+  renderDeptTypenGrid();
+  renderQualitaetsCockpit();
+  renderGruppenTeilnehmerSection();
+}
+
+function renderDeptTypenGrid() {
+  const grid = document.getElementById("dp-dept-grid");
+  if (!grid) return;
+  const allActiveDepts = [...allDepts, ...SPECIAL_DEPTS.map(s => s.key)
+    .filter(k => !allDepts.includes(k) && Object.values(effectivePersonAbt).includes(k))];
+
+  grid.innerHTML = allActiveDepts.map(dept => {
+    const farbe = effectiveAbtFarben[dept] || "#9ca3af";
+    const curTyp = deptFunktionen[dept] || "";
+    const opts = DEPT_TYP_OPTS.map(o =>
+      `<option value="${o.val}"${o.val === curTyp ? " selected" : ""}>${o.label}${o.hint ? " ("+o.hint+")" : ""}</option>`
+    ).join("");
+    return `<div class="dp-dept-row">
+      <span class="abt-badge" style="background:${farbe}22;color:${farbe};border:1px solid ${farbe}55;min-width:100px;justify-content:center">${dept}</span>
+      <select class="dp-typ-sel" data-dept="${dept.split('"').join('&#34;')}" onchange="setDeptTyp(this)">${opts}</select>
+    </div>`;
+  }).join("") || '<p class="hint">Keine Abteilungen geladen.</p>';
+}
+
+function setDeptTyp(sel) {
+  const dept = sel.dataset.dept;
+  if (sel.value) deptFunktionen[dept] = sel.value;
+  else delete deptFunktionen[dept];
+  saveConfig();
+  // FL auto-suggestions für betroffene Meetings aktualisieren
+  MEETINGS.forEach(m => {
+    if (m.flugebeneAuto && (m.abteilung === dept ||
+        m.teilnehmer.some(t => effectivePersonAbt[t] === dept))) {
+      m.flugebene = suggestFlightLevel(m);
+    }
+  });
+  renderedTabs.delete(10);
+  showToast("Abteilungstyp gespeichert");
+}
+
+function renderQualitaetsCockpit() {
+  const grid = document.getElementById("dp-quality-grid");
+  if (!grid) return;
+  const total = MEETINGS.length;
+  if (total === 0) { grid.innerHTML = ""; return; }
+
+  const knownPersons = Object.keys(effectivePersonAbt);
+  const metrics = [
+    { label: "Dauer erfasst",
+      count: MEETINGS.filter(m => m.dauer !== null).length, tot: total,
+      hint: "Nötig für Zeitlastberechnung, Engpass und Treemap.",
+      action: "Dauern in Confluence eintragen.", color: "#59B2A5" },
+    { label: "Wirkung bewertet",
+      count: MEETINGS.filter(m => m.wert !== null).length, tot: total,
+      hint: "Nötig für Wirkungsmatrix (Tab 8) und FL-Diagnose F3.",
+      action: "Als Spalte in Confluence-Tabelle eintragen (Wirkung 1-4).", color: "#2176ae" },
+    { label: "Infofluss dokumentiert",
+      count: MEETINGS.filter(m => m.infofluss && m.infofluss.trim()).length, tot: total,
+      hint: "Dokumentiert wohin Informationen fließen.",
+      action: "In Confluence-Tabelle befüllen.", color: "#7c9e44" },
+    { label: "Abteilungstypen gepflegt",
+      count: allDepts.filter(d => deptFunktionen[d]).length, tot: allDepts.length || 1,
+      hint: "Verbessert Flight-Level-Klassifikation erheblich.",
+      action: "Hier oben in 'Abteilungstypen' eintragen.", color: "#7c6bab" },
+    { label: "Ohne Gruppen-Teilnehmer",
+      count: MEETINGS.filter(m => !m.hatGruppenTeilnehmer).length, tot: total,
+      hint: "Meetings mit Gruppen-Platzhaltern können nicht personengenau analysiert werden.",
+      action: "Unten in 'Gruppen-Teilnehmer' auflösen.", color: "#e05c2a" },
+    { label: "Personen klar zugeordnet",
+      count: knownPersons.filter(p => (personConfidence[p]?.score || 1) >= 0.7).length,
+      tot: knownPersons.length || 1,
+      hint: "Unsichere Personen (gelber Punkt) können Charts verzerren.",
+      action: "Im Tab 'Personen' gelbe Punkte pruefen.", color: "#c25050" },
+  ];
+
+  grid.innerHTML = metrics.map(m => {
+    const pct = m.tot > 0 ? Math.round(m.count / m.tot * 100) : 100;
+    const good = pct >= 80;
+    const ic = good ? "✓" : "⚠";
+    const ic_color = good ? "#059669" : "#d97706";
+    return `<div class="dp-qual-card">
+      <div class="dp-qual-header">
+        <span style="color:${ic_color};font-weight:700;font-size:.88rem">${ic}</span>
+        <span class="dp-qual-label">${m.label}</span>
+        <span class="dp-qual-val" style="color:${ic_color}">${m.count}/${m.tot} (${pct}%)</span>
+      </div>
+      <div class="dp-qual-bar"><div class="dp-qual-fill" style="width:${pct}%;background:${good ? m.color : '#fbbf24'}"></div></div>
+      <div class="dp-qual-hint">${good ? m.hint : '<b>'+m.action+'</b> '+m.hint}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderGruppenTeilnehmerSection() {
+  const section = document.getElementById("dp-gruppen-section");
+  if (!section) return;
+  const withGroups = MEETINGS.filter(m => m.hatGruppenTeilnehmer);
+  if (withGroups.length === 0) {
+    section.innerHTML = `<p class="dp-section-title">Gruppen-Teilnehmer <span class="dp-count-badge dp-count-ok">0 erkannt</span></p>
+      <p class="dp-section-desc" style="color:#059669;margin-bottom:0">✓ Alle Teilnehmer sind einzelne Personen – keine Gruppen-Platzhalter erkannt.</p>`;
+    return;
+  }
+  const allPersons = [...new Set(Object.keys(effectivePersonAbt))].sort();
+  const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+  const aufloesungen = cfg.gruppenAufloesungen || {};
+  // Zeilen vorab berechnen (kein nested Template-Literal in ${} – Safari-Kompatibilität)
+  const rowsHTML = withGroups.flatMap(function(m) {
+    return m.gruppenTeilnehmer.map(function(g) {
+      const key = m.abteilung + "||" + m.name + "||" + g;
+      const cur = aufloesungen[key] || [];
+      const farbe = effectiveAbtFarben[m.abteilung] || "#9ca3af";
+      const opts = allPersons.map(function(p) {
+        return '<option value="' + p + '"' + (cur.includes(p) ? ' selected' : '') + '>' + p + '<\/option>';
+      }).join("");
+      return '<div class="dp-gruppen-row">'
+        + '<div class="dp-gruppen-meeting">'
+        + '<span class="abt-badge" style="font-size:.7rem;padding:1px 5px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + m.abteilung + '<\/span>'
+        + '<strong style="font-size:.83rem">' + m.name + '<\/strong>'
+        + '<span class="kat-pill" style="background:#fef3c7;color:#92400e;border-color:#fcd34d">⚑ ' + g + '<\/span>'
+        + '<\/div>'
+        + '<div class="dp-gruppen-assign">'
+        + '<select multiple class="dp-gruppen-sel" data-key="' + key + '" size="4">' + opts + '<\/select>'
+        + '<button class="btn-secondary" style="font-size:.76rem" onclick="saveGruppenAufloesung(this)">Speichern<\/button>'
+        + '<\/div><\/div>';
+    });
+  }).join("");
+  section.innerHTML = '<p class="dp-section-title">Gruppen-Teilnehmer <span class="dp-count-badge dp-count-warn">' + withGroups.length + ' Meetings<\/span><\/p>'
+    + '<p class="dp-section-desc">Ordne Gruppen-Platzhaltern echte Personen zu. Die Auflösungen werden gespeichert und beim nächsten Import wieder angewandt.<\/p>'
+    + rowsHTML;
+}
+
+function saveGruppenAufloesung(btn) {
+  const sel = btn.previousElementSibling;
+  const key = sel.dataset.key;
+  const selected = [...sel.selectedOptions].map(o => o.value);
+  const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+  if (!cfg.gruppenAufloesungen) cfg.gruppenAufloesungen = {};
+  if (selected.length > 0) cfg.gruppenAufloesungen[key] = selected;
+  else delete cfg.gruppenAufloesungen[key];
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+  showToast("Gruppen-Zuordnung gespeichert");
+}
+
+function exportConfig() {
+  const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+  const json = JSON.stringify(cfg, null, 2);
+
+  // Versuche Browser-Download
+  try {
+    const uri = 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(json);
+    const a = document.createElement('a');
+    a.href = uri;
+    a.download = 'meeting-config.json';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { document.body.removeChild(a); }, 200);
+  } catch(e) {}
+
+  // Zeige JSON immer im Modal – Safari-Fallback (Kopieren + als .json speichern)
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = '<div style="background:white;border-radius:12px;padding:28px;max-width:580px;width:90%;max-height:80vh;display:flex;flex-direction:column;gap:12px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center">'
+    + '<strong style="font-size:.95rem">meeting-config.json</strong>'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="border:none;background:none;font-size:1.2rem;cursor:pointer;color:#6b7280">✕</button>'
+    + '</div>'
+    + '<p style="font-size:.8rem;color:#6b7280;margin:0">Falls kein Download gestartet wurde: Inhalt kopieren → Texteditor → als <code>meeting-config.json</code> speichern.</p>'
+    + '<textarea style="width:100%;height:260px;font-family:monospace;font-size:.75rem;border:1px solid #e2e8f0;border-radius:6px;padding:10px;resize:none;box-sizing:border-box" readonly>' + json.replace(/</g,'&lt;') + '</textarea>'
+    + '<button onclick="navigator.clipboard&&navigator.clipboard.writeText(' + JSON.stringify(json) + ');this.textContent=\'✓ Kopiert\'" style="background:#59B2A5;color:white;border:none;border-radius:8px;padding:9px 18px;cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:600">In Zwischenablage kopieren</button>'
+    + '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
+function importConfigFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const cfg = JSON.parse(e.target.result);
+      const VALID = ["personAbt","fkList","flugebeneOverrides","deptFunktionen","gruppenAufloesungen"];
+      const sanitized = {};
+      VALID.forEach(k => { if (cfg[k] !== undefined) sanitized[k] = cfg[k]; });
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(sanitized));
+      deptFunktionen = sanitized.deptFunktionen || {};
+      // Vollständige Re-Init des abgeleiteten Zustands
+      const derived = autoDerivePERSON_ABT(MEETINGS);
+      personConfidence   = derived.confidence;
+      effectivePersonAbt = { ...derived.map, ...PERSON_ABT };
+      effectiveAbtFarben = buildAbtFarben(allDepts);
+      fkSet = new Set(FK_LIST);
+      applyStoredConfig();
+      MEETINGS.forEach(m => {
+        const abts = new Set(m.teilnehmer.map(t => effectivePersonAbt[t]).filter(Boolean));
+        m.abteilungsuebergreifend = abts.size > 1;
+      });
+      MEETINGS.forEach(m => { if (m.flugebeneAuto) m.flugebene = suggestFlightLevel(m); });
+      MEETINGS.forEach(m => {
+        m.gruppenTeilnehmer = m.teilnehmer.filter(isGruppenParticipant);
+        m.hatGruppenTeilnehmer = m.gruppenTeilnehmer.length > 0;
+      });
+      renderedTabs.clear();
+      renderStats();
+      renderTable();
+      renderPersonenTab();
+      renderedTabs.add(0); renderedTabs.add(9);
+      // Konfiguration-Tab sofort neu rendern (User ist noch darauf)
+      if (typeof renderDatapflege === 'function') renderDatapflege();
+      showToast("Konfiguration importiert ✓");
+    } catch(err) {
+      showToast("Fehler beim Import: " + err.message);
+    }
+    input.value = "";
+  };
+  reader.readAsText(file);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+</script>
+<script>
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 10: Flight Levels – 5 Diagnose-Visualisierungen
 // ══════════════════════════════════════════════════════════════════════════════
+function _renderFLBriefing(aktive, byFL) {
+  var el = document.getElementById("fl-briefing");
+  if (!el || !aktive.length) return;
+
+  var fl1 = byFL.FL1.length, fl2 = byFL.FL2.length, fl3 = byFL.FL3.length;
+  var total = fl1 + fl2 + fl3;
+
+  // Pyramide gesund?
+  var pyramidOk = fl2 > 0 && fl1 >= fl2 && fl2 >= fl3;
+  var pyramidStatus, pyramidColor;
+  if (fl2 === 0) {
+    pyramidStatus = '⚠ FL2-Koordination fehlt vollständig – Meetings springen direkt von operativ zu strategisch';
+    pyramidColor = '#dc2626';
+  } else if (fl2 < fl3) {
+    pyramidStatus = '⚠ FL2 (' + fl2 + ') kleiner als FL3 (' + fl3 + ') – Koordinationsebene unterentwickelt';
+    pyramidColor = '#d97706';
+  } else {
+    pyramidStatus = '✓ Kommunikationspyramide stimmig (FL1 ≥ FL2 ≥ FL3)';
+    pyramidColor = '#059669';
+  }
+
+  // F2: Koordinationsluecken
+  var mainDepts = allDepts.filter(function(d){ return !SPECIAL_DEPTS.find(function(s){ return s.key===d; }); });
+  var conn = {};
+  byFL.FL2.forEach(function(m) {
+    var abtSet = new Set([m.abteilung]);
+    m.teilnehmer.forEach(function(t){ var a = effectivePersonAbt[t]; if (a && mainDepts.includes(a)) abtSet.add(a); });
+    var arr = [...abtSet].filter(function(a){ return mainDepts.includes(a); });
+    for (var i=0;i<arr.length;i++) for (var j=i+1;j<arr.length;j++) { var k=[arr[i],arr[j]].sort().join('||'); conn[k]=(conn[k]||0)+1; }
+  });
+  var maxPairs = Math.round(mainDepts.length*(mainDepts.length-1)/2);
+  var missing = maxPairs - Object.keys(conn).length;
+
+  // F4: Brückenköpfe
+  var pFlH = {};
+  aktive.forEach(function(m) {
+    if (!m.flugebene) return;
+    var h = (m.dauer ? m.dauer/60 : 1) * (FREQ_MONTHLY[m.rhythmus_klasse]||0.5);
+    m.teilnehmer.forEach(function(t){ if (!pFlH[t]) pFlH[t]={FL1:0,FL2:0,FL3:0}; pFlH[t][m.flugebene]+=h; });
+  });
+  var bruecken = Object.entries(pFlH).filter(function(e){ return e[1].FL1>0&&e[1].FL2>0&&e[1].FL3>0; }).length;
+
+  // F5: Frequenz-Mismatches
+  var MISMATCH5 = { FL1:["monatlich","quartalsweise"], FL2:[], FL3:["täglich","wöchentlich"] };
+  var mismatch = aktive.filter(function(m){ return MISMATCH5[m.flugebene] && MISMATCH5[m.flugebene].includes(m.rhythmus_klasse); }).length;
+
+  el.innerHTML = '<div class="komm-briefing-card">'
+    + '<div class="tbr-header"><span class="tbr-title">Flight Levels – Executive Summary</span>'
+    + '<span class="tbr-sub">' + total + ' Meetings klassifiziert</span></div>'
+    + '<div style="padding:6px 0 10px;font-size:.83rem;font-weight:600;color:' + pyramidColor + '">' + pyramidStatus + '</div>'
+    + '<div class="komm-insights-grid">'
+    + '<div class="komm-insight"><div class="komm-insight-label">FL2-Koordinations-Lücken</div>'
+    + '<div class="komm-insight-value" style="color:' + (missing>0?'#d97706':'#059669') + '">' + (missing>0 ? missing + ' fehlend' : '0 – vollständig') + '</div>'
+    + '<div class="komm-insight-sub">von ' + maxPairs + ' möglichen Abt.-Paaren ' + (maxPairs-missing) + ' mit FL2-Verbindung</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Brückenkopf-Personen</div>'
+    + '<div class="komm-insight-value" style="color:' + (bruecken>0?'#d97706':'#059669') + '">' + bruecken + '</div>'
+    + '<div class="komm-insight-sub">Person' + (bruecken===1?'':'en') + ' auf allen 3 Ebenen gleichzeitig</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Frequenz-Mismatches (F5)</div>'
+    + '<div class="komm-insight-value" style="color:' + (mismatch>0?'#d97706':'#059669') + '">' + (mismatch>0 ? mismatch + ' Meetings' : '0 – alle stimmig') + '</div>'
+    + '<div class="komm-insight-sub">Rhythmus passt nicht zur FL-Ebene</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Verteilung</div>'
+    + '<div class="komm-insight-value" style="font-size:.8rem">FL1: ' + fl1 + ' · FL2: ' + fl2 + ' · FL3: ' + fl3 + '</div>'
+    + '<div class="komm-insight-sub">Optimal: FL1 &gt; FL2 &gt; FL3</div></div>'
+    + '</div></div>';
+}
+
 function renderFlightLevels() {
   const FL_COLORS = { FL1: "#59B2A5", FL2: "#2176ae", FL3: "#7c6bab" };
   const FL_LABELS = { FL1: "FL1 · Operativ", FL2: "FL2 · Koordination", FL3: "FL3 · Strategisch" };
@@ -2627,6 +3451,8 @@ function renderFlightLevels() {
   const aktive = MEETINGS.filter(m => !m.ist_platzhalter);
   const byFL = { FL1: [], FL2: [], FL3: [] };
   aktive.forEach(m => { if (byFL[m.flugebene]) byFL[m.flugebene].push(m); });
+
+  _renderFLBriefing(aktive, byFL);
 
   function hPerMonth(ms) {
     return ms.reduce((s, m) => {
@@ -2752,7 +3578,7 @@ function renderFlightLevels() {
     const rated = aktive.filter(m => m.flugebene && m.wert !== null);
     if (rated.length < 3) {
       document.getElementById("chart-fl-wirkung").innerHTML =
-        '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Zu wenig Wirkungsbewertungen – bitte im Tab „Alle Meetings" eintragen.</p>';
+        '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Zu wenig Wirkungsbewertungen – Wirkung (1–4) als Spalte in der Confluence-Tabelle ergaenzen.</p>';
     } else {
       Plotly.newPlot("chart-fl-wirkung", FL_KEYS.map(fl => {
         const ms = rated.filter(m => m.flugebene === fl);
@@ -2896,9 +3722,16 @@ function renderFlightLevels() {
     if (a) {
       const bad = Object.values(buckets).filter(b => MISMATCH[b.fl] && MISMATCH[b.fl].includes(b.r));
       if (bad.length > 0) {
-        const names = bad.slice(0,3).map(b => `„${b.meetings[0]}" (${b.fl} · ${b.r})`).join(", ");
-        const more  = bad.length > 3 ? ` +${bad.length-3} weitere` : "";
-        a.innerHTML = `<b>⚠ ${bad.length} Meeting(s) mit unpassender Frequenz für ihre Ebene</b> (rot): ${names}${more}`;
+        const EXPECTED_TEXT = { FL1: "täglich/wöchentlich", FL2: "zwei-/dreiwöchentlich", FL3: "monatlich/quartalsweise" };
+        var rows = bad.map(function(b) {
+          var mNames = b.meetings.slice(0,2).join(', ') + (b.meetings.length > 2 ? ' +' + (b.meetings.length-2) : '');
+          var why = b.fl + ' erwartet ' + (EXPECTED_TEXT[b.fl]||'') + ', hat aber ' + b.r;
+          return '<div style="padding:3px 0;border-top:1px solid #fcd34d33">'
+            + '<span style="font-weight:600">' + mNames + '</span>'
+            + '<span style="color:#b45309;margin-left:6px;font-size:.78rem">' + why + '</span>'
+            + '</div>';
+        }).join('');
+        a.innerHTML = '<b>⚠ ' + bad.length + ' Meeting(s) mit unpassender Frequenz:</b>' + rows;
         a.className = "fl-alert fl-alert-warn";
       } else {
         a.innerHTML = "<b>✓ Alle Meetings haben eine zur Ebene passende Häufigkeit.</b>";
@@ -2921,6 +3754,12 @@ function refreshAllCharts() {
     if (m.flugebeneAuto) m.flugebene = suggestFlightLevel(m);
   });
   renderedTabs.delete(10); // Flight Levels neu rendern
+  renderedTabs.delete(12); // Datenpflege neu rendern
+  // Gruppen-Teilnehmer nach Abteilungsänderung neu prüfen
+  MEETINGS.forEach(m => {
+    m.gruppenTeilnehmer = m.teilnehmer.filter(isGruppenParticipant);
+    m.hatGruppenTeilnehmer = m.gruppenTeilnehmer.length > 0;
+  });
   netCache = null;
   renderedTabs.delete(1); // Netzwerk wird beim nächsten Tab-Besuch frisch gerendert
   renderedTabs.delete(3); // Kalender wird beim nächsten Tab-Besuch frisch gerendert
@@ -2946,10 +3785,7 @@ function saveConfig() {
     if (d !== autoVal || htmlVal) personAbt[p] = d; // abweichend oder explizit gesetzt
   });
   const fkArr = [...fkSet].sort();
-  const wertOverrides = {};
-  MEETINGS.forEach((m, i) => {
-    if (m.wert !== null) wertOverrides[m.abteilung + "||" + m.name + "||" + i] = m.wert;
-  });
+  // Wirkung kommt aus Confluence-Quelle, kein Tool-Override
   // flugebeneOverrides: nur manuell gesetzte Werte, stabiler Schlüssel ohne idx
   const flugebeneOverrides = {};
   MEETINGS.forEach(m => {
@@ -2957,7 +3793,10 @@ function saveConfig() {
       flugebeneOverrides[m.abteilung + "||" + m.name] = m.flugebene;
   });
   try {
-    localStorage.setItem(CONFIG_KEY, JSON.stringify({ personAbt, fkList: fkArr, wertOverrides, flugebeneOverrides }));
+    // deptFunktionen + gruppenAufloesungen bleiben stabil über Imports
+    const storedCfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+    const gruppenAufloesungen = storedCfg.gruppenAufloesungen || {};
+    localStorage.setItem(CONFIG_KEY, JSON.stringify({ personAbt, fkList: fkArr, flugebeneOverrides, deptFunktionen, gruppenAufloesungen }));
     const hint = document.getElementById("config-save-hint");
     if (hint) {
       hint.textContent = "● Gespeichert";
@@ -2985,12 +3824,7 @@ function applyStoredConfig() {
     if (cfg.fkList) {
       cfg.fkList.forEach(p => { if (knownPersons.has(p)) fkSet.add(p); });
     }
-    if (cfg.wertOverrides) {
-      MEETINGS.forEach((m, i) => {
-        const key = m.abteilung + "||" + m.name + "||" + i;
-        if (cfg.wertOverrides[key] != null) m.wert = cfg.wertOverrides[key];
-      });
-    }
+    // wertOverrides: nicht mehr im Tool pflegbar – Wirkung kommt aus Confluence
     // flugebeneOverrides überleben neue Imports (stabiler Schlüssel ohne idx)
     if (cfg.flugebeneOverrides) {
       MEETINGS.forEach(m => {
@@ -3001,6 +3835,8 @@ function applyStoredConfig() {
         }
       });
     }
+    // deptFunktionen aus localStorage (stabil über Imports)
+    if (cfg.deptFunktionen) deptFunktionen = cfg.deptFunktionen;
     updateConfigHint(true);
   } catch(e) { /* ignore parse errors */ }
 }
@@ -3015,8 +3851,9 @@ function updateConfigHint(hasStored) {
 }
 
 function resetConfig() {
-  if (!confirm("Alle manuellen Zuordnungen und FK-Markierungen löschen?")) return;
+  if (!confirm("Alle manuellen Zuordnungen, Abteilungstypen, FK-Markierungen und Gruppen-Auflösungen löschen?")) return;
   try { localStorage.removeItem(CONFIG_KEY); } catch(e) {}
+  deptFunktionen = {};
   // Neu ableiten ohne Overrides
   const derived = autoDerivePERSON_ABT(MEETINGS);
   personConfidence   = derived.confidence;
