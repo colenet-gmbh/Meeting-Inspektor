@@ -732,7 +732,7 @@ const RHYTHMUS_MAP = [
   [/dreiwöch/i,                                   "dreiwöchentlich"],
   [/zwei.*wöch|alle\s*2\s*woch|bi.?week/i,        "zweiwöchentlich"],
   [/wöchentl|weekly|1x.*woch/i,                   "wöchentlich"],
-  [/monatl|monthly|letzt.*monat|dritten.*mi/i,    "monatlich"],
+  [/monatl|monthly/i,                              "monatlich"],
   [/quartal|quarterly/i,                           "quartalsweise"],
   [/divers|variabel|nach bedarf/i,                "variabel"],
 ];
@@ -777,7 +777,7 @@ function isGruppenParticipant(name) {
   if (name.length > 30) return true;                             // Zu lang für einen Namen
   if (allDepts.includes(name)) return true;                      // Passt zu bekanntem Abt.-Namen
   if (SPECIAL_DEPTS.find(s => s.key === name)) return true;      // Sonderkategorie
-  if (/\balle\b|\bteam\b|\bgruppe\b|\bdept\b/i.test(name)) return true;
+  if (/\balle\b|\bteam\b/i.test(name)) return true;
   return false;
 }
 
@@ -818,11 +818,8 @@ function suggestFlightLevel(m) {
   else if (r === "zweiwöchentlich" || r === "dreiwöchentlich") s2 += 2;
   else if (r === "monatlich" || r === "quartalsweise")         s3 += 2;
 
-  // Keywords in Kategorie + Zweck
-  const text = ((m.kategorie || "") + " " + (m.zweck || "")).toLowerCase();
-  if (/strateg|portfolio|vorstand|board|leitungs|geschäftsführ|c-level/.test(text)) s3 += 3;
-  if (/koordin|sync\b|abstimm|steuer|programm|jour.fix/.test(text))                 s2 += 2;
-  if (/standup|daily|retro|retrospektiv|planning|sprint/.test(text))                 s1 += 2;
+  // Keine Keyword-Heuristik auf Kategorie/Zweck – Quelldaten werden nicht hardcoded.
+  // Abteilungstypen im Konfiguration-Tab sind der richtige Weg zur FL-Klassifikation.
 
   if (s3 >= s2 && s3 >= s1) return "FL3";
   if (s2 >= s1)             return "FL2";
@@ -1023,9 +1020,9 @@ function parseData(text) {
       wert,           // Empfundener Wert 1–4 (null = nicht bewertet)
       flugebene: (() => {
         const raw = (get("flugebene") || "").toLowerCase();
-        if (/fl1|fl\s*1|operativ/.test(raw)) return "FL1";
-        if (/fl2|fl\s*2|koordin/.test(raw)) return "FL2";
-        if (/fl3|fl\s*3|strateg/.test(raw)) return "FL3";
+        if (/fl1|fl\s*1/i.test(raw)) return "FL1";
+        if (/fl2|fl\s*2/i.test(raw)) return "FL2";
+        if (/fl3|fl\s*3/i.test(raw)) return "FL3";
         return null;
       })(),
       flugebeneAuto: !get("flugebene"), // false wenn Wert aus Import-Spalte stammt
@@ -1320,7 +1317,7 @@ const TAB_INFO = {
        achten: "Meetings ohne Wirkungsbewertung fehlen in der Wirkungsmatrix. Nutze die Suche, um alle Meetings einer Person oder Abteilung zu finden.",
        folgefragen: "Welche Meetings haben noch keine Wirkungsbewertung? Gibt es Meetings, die nicht mehr stattfinden, aber noch als Aktiv geführt sind?" },
   10: { title: "Flight Levels – Kommunikationsfluss-Diagnose",
-        was: "Fünf diagnostische Visualisierungen basierend auf dem Flight Levels Framework (Klaus Leopold): Kommunikationspyramide, FL2-Verbindungsmatrix, Wirkungsgrad nach Ebene, Brückenkopf-Heatmap und Frequenz-Level-Matrix.",
+        was: "Fünf diagnostische Visualisierungen: Kommunikationspyramide (FL1/FL2/FL3), FL2-Verbindungsmatrix, Wirkungsgrad nach Ebene, Brückenkopf-Heatmap und Frequenz-Level-Matrix.",
         achten: "FL1 = Operativ (Teamarbeit), FL2 = Koordination (teamübergreifend), FL3 = Strategisch (Portfolio). Fehlende FL2-Meetings sind das häufigste Dysfunktionssignal. Die FL-Klassifikation erfolgt automatisch über Abteilungstypen (im Konfiguration-Tab pflegbar).",
         folgefragen: "Existiert FL2 wirklich, oder wird koordiniert durch Ad-hoc-Eskalation? Welche Abteilungspaare haben keine strukturierte Koordination? Wer sitzt auf allen drei Ebenen gleichzeitig?" },
   11: { title: "KI-Analyse",
