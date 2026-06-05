@@ -408,6 +408,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   </div>
   <div id="panel-1" class="panel" data-tab="3">
     <button class="tab-info-btn" onclick="showTabInfo(3)">ℹ</button>
+    <div id="kalender-briefing" style="margin-bottom:16px"></div>
     <div class="chart-card" id="chart-kalender"></div>
     <p class="hint">Bubble-Größe = Anzahl Meetings · Farbe = Abteilung · Legende rechts · Hover = Meeting-Namen</p>
   </div>
@@ -430,6 +431,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   </div>
   <div id="panel-3" class="panel" data-tab="2">
     <button class="tab-info-btn" onclick="showTabInfo(2)">ℹ</button>
+    <div id="abt-briefing" style="margin-bottom:16px"></div>
     <div class="toggle-grp">
       <button id="abt-btn-anzahl" class="active" onclick="setAbtMode('anzahl')">Anzahl</button>
       <button id="abt-btn-freq" onclick="setAbtMode('freq')">Freq./Monat</button>
@@ -558,6 +560,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 
   <div id="panel-8" class="panel" data-tab="6">
     <button class="tab-info-btn" onclick="showTabInfo(6)">ℹ</button>
+    <div id="engpass-briefing" style="margin-bottom:16px"></div>
     <div class="toggle-grp" style="margin-bottom:12px">
       <button id="eng-btn-alle" class="active" onclick="setEngpassMode('alle')">Alle</button>
       <button id="eng-btn-fk"   onclick="setEngpassMode('fk')">★ Führungskräfte</button>
@@ -598,7 +601,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "05.06.2026 10:15";
+const APP_VERSION = "05.06.2026 11:10";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1591,6 +1594,7 @@ function _plotNetzwerk(firstRender) {
 // Tab 2: Kalender
 // ══════════════════════════════════════════════════════════════════════════════
 function renderKalender() {
+  _renderKalenderBriefing();
   const aktive = MEETINGS.filter(m => m.status === "Aktiv");
   const rhyO   = ["variabel","quartalsweise","monatlich","zweiwöchentlich","dreiwöchentlich","wöchentlich","täglich"];
   // Numerische X-Positionen für die Wochentage (nötig für Dodge-Offsets)
@@ -1852,6 +1856,7 @@ function renderAbtChart() {
 }
 
 function renderAbteilung() {
+  _renderAbteilungsBriefing();
   renderAbtChart();
   renderRhythmusChart();
   renderStatusVerteilung();
@@ -2662,6 +2667,7 @@ function toggleEngpassExpand() {
 
 function renderEngpass() {
   if (!MEETINGS.length) return;
+  _renderEngpassBriefing();
 
   // Meetings pro Person zählen: als Verantwortliche/r und als Teilnehmer/in
   const kopfCount  = {};
@@ -3150,6 +3156,203 @@ function _renderWirkungsBriefing(data, xVals, xMedian) {
         + optRows + moreOpt : '')
     + hintLine
     + '</div>';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Executive Briefings – Abteilungen, Kalender, Engpass
+// ══════════════════════════════════════════════════════════════════════════════
+function _renderAbteilungsBriefing() {
+  var el = document.getElementById("abt-briefing");
+  if (!el) return;
+  if (!MEETINGS.length) { el.innerHTML = ''; return; }
+
+  var aktive = MEETINGS.filter(function(m){ return m.status === 'Aktiv'; });
+  if (!aktive.length) { el.innerHTML = ''; return; }
+
+  // Meeting-Anzahl pro Abteilung
+  var abtCounts = {};
+  aktive.forEach(function(m) {
+    var a = m.abteilung || 'Unbekannt';
+    abtCounts[a] = (abtCounts[a] || 0) + 1;
+  });
+  var abts = Object.keys(abtCounts).sort(function(a,b){ return abtCounts[b]-abtCounts[a]; });
+  var topAbt   = abts[0];
+  var leastAbt = abts[abts.length - 1];
+
+  // Abteilungsübergreifende Meetings
+  var uebergr    = aktive.filter(function(m){ return m.abteilungsuebergreifend; }).length;
+  var uebergrPct = Math.round(uebergr / aktive.length * 100);
+
+  // Durchschnittliche Wirkung pro Abteilung (nur wenn >= 2 bewertete Meetings)
+  var wirkSum = {}, wirkN = {};
+  aktive.forEach(function(m) {
+    if (m.wert !== null && m.wert !== undefined) {
+      var a = m.abteilung || 'Unbekannt';
+      wirkSum[a] = (wirkSum[a] || 0) + m.wert;
+      wirkN[a]   = (wirkN[a]   || 0) + 1;
+    }
+  });
+  var wirkAbts = Object.keys(wirkN).filter(function(a){ return wirkN[a] >= 2; });
+  wirkAbts.sort(function(a,b){ return (wirkSum[b]/wirkN[b]) - (wirkSum[a]/wirkN[a]); });
+  var bestWirkAbt = wirkAbts.length ? wirkAbts[0] : null;
+  var bestWirkVal = bestWirkAbt ? Math.round(wirkSum[bestWirkAbt]/wirkN[bestWirkAbt]*10)/10 : null;
+
+  var wirkInsight = bestWirkAbt
+    ? '<div class="komm-insight"><div class="komm-insight-label">Beste Wirkung (Ø)</div>'
+      + '<div class="komm-insight-value">' + bestWirkAbt + '</div>'
+      + '<div class="komm-insight-sub">Ø ' + bestWirkVal + ' / 4 auf Basis von ' + wirkN[bestWirkAbt] + ' bewerteten Meetings</div></div>'
+    : '';
+
+  el.innerHTML = '<div class="komm-briefing-card">'
+    + '<div class="tbr-header">'
+    + '<span class="tbr-title">Abteilungen – Auf einen Blick</span>'
+    + '<span class="tbr-sub">' + aktive.length + ' aktive Meetings · ' + abts.length + ' Abteilungen</span>'
+    + '</div>'
+    + '<div class="komm-insights-grid">'
+    + '<div class="komm-insight"><div class="komm-insight-label">Meiste Meetings</div>'
+    + '<div class="komm-insight-value">' + topAbt + '</div>'
+    + '<div class="komm-insight-sub">' + abtCounts[topAbt] + ' aktive Meeting-Formate</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Wenigste Meetings</div>'
+    + '<div class="komm-insight-value">' + leastAbt + '</div>'
+    + '<div class="komm-insight-sub">' + abtCounts[leastAbt] + ' aktive Meeting-Formate</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Abteilungsübergreifend</div>'
+    + '<div class="komm-insight-value">' + uebergrPct + '%</div>'
+    + '<div class="komm-insight-sub">' + uebergr + ' von ' + aktive.length + ' Meetings verbinden mehrere Abteilungen</div></div>'
+    + wirkInsight
+    + '</div></div>';
+}
+
+function _renderKalenderBriefing() {
+  var el = document.getElementById("kalender-briefing");
+  if (!el) return;
+  if (!MEETINGS.length) { el.innerHTML = ''; return; }
+
+  var aktive = MEETINGS.filter(function(m){ return m.status === 'Aktiv'; });
+  if (!aktive.length) { el.innerHTML = ''; return; }
+
+  // Meetings pro Wochentag zählen
+  var tagOrder  = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
+  var tagCounts = {};
+  tagOrder.forEach(function(t){ tagCounts[t] = 0; });
+  aktive.forEach(function(m) {
+    m.wochentage.forEach(function(t) {
+      if (tagCounts.hasOwnProperty(t)) tagCounts[t]++;
+    });
+  });
+
+  var sortedTage = tagOrder.slice().sort(function(a,b){ return tagCounts[b]-tagCounts[a]; });
+  var busiestTag = sortedTage[0];
+  var freeTage   = tagOrder.filter(function(t){ return tagCounts[t] === 0; });
+
+  // Rhythmus-Verteilung
+  var rhyCounts = {};
+  aktive.forEach(function(m) {
+    var r = m.rhythmus_klasse || 'variabel';
+    rhyCounts[r] = (rhyCounts[r] || 0) + 1;
+  });
+  var topRhy    = Object.keys(rhyCounts).sort(function(a,b){ return rhyCounts[b]-rhyCounts[a]; })[0];
+  var topRhyPct = Math.round(rhyCounts[topRhy] / aktive.length * 100);
+
+  // Meetings ohne festen Wochentag
+  var ohneTag = aktive.filter(function(m) {
+    return !m.wochentage.length || (m.wochentage.length === 1 && m.wochentage[0] === '—');
+  }).length;
+
+  var freiInsight = freeTage.length
+    ? '<div class="komm-insight"><div class="komm-insight-label">Meeting-freie Tage</div>'
+      + '<div class="komm-insight-value">' + freeTage.join(', ') + '</div>'
+      + '<div class="komm-insight-sub">Keine aktiven Meetings an diesen Wochentagen</div></div>'
+    : '<div class="komm-insight"><div class="komm-insight-label">Verteilung</div>'
+      + '<div class="komm-insight-value">Mo–Fr</div>'
+      + '<div class="komm-insight-sub">Aktive Meetings an allen Wochentagen</div></div>';
+
+  el.innerHTML = '<div class="komm-briefing-card">'
+    + '<div class="tbr-header">'
+    + '<span class="tbr-title">Kalender – Auf einen Blick</span>'
+    + '<span class="tbr-sub">' + aktive.length + ' aktive Meetings'
+    + (ohneTag ? ' · ' + ohneTag + ' ohne festen Wochentag' : '') + '</span>'
+    + '</div>'
+    + '<div class="komm-insights-grid">'
+    + '<div class="komm-insight"><div class="komm-insight-label">Meistbelasteter Tag</div>'
+    + '<div class="komm-insight-value">' + busiestTag + '</div>'
+    + '<div class="komm-insight-sub">' + tagCounts[busiestTag] + ' Meeting-Einträge (inkl. mehrere Abteilungen)</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Häufigster Rhythmus</div>'
+    + '<div class="komm-insight-value">' + topRhy.charAt(0).toUpperCase() + topRhy.slice(1) + '</div>'
+    + '<div class="komm-insight-sub">' + topRhyPct + '% aller aktiven Meetings (' + rhyCounts[topRhy] + ' von ' + aktive.length + ')</div></div>'
+    + freiInsight
+    + '</div></div>';
+}
+
+function _renderEngpassBriefing() {
+  var el = document.getElementById("engpass-briefing");
+  if (!el) return;
+  if (!MEETINGS.length) { el.innerHTML = ''; return; }
+
+  // Meeting-Anzahl pro Person (alle Meetings, kein Mode-Filter – Briefing zeigt Gesamtbild)
+  var kopfCount = {}, teilnCount = {};
+  MEETINGS.forEach(function(m) {
+    if (m.verantwortlich) kopfCount[m.verantwortlich] = (kopfCount[m.verantwortlich] || 0) + 1;
+    m.teilnehmer.forEach(function(t) {
+      teilnCount[t] = (teilnCount[t] || 0) + 1;
+    });
+  });
+
+  var pSet = {};
+  Object.keys(kopfCount).forEach(function(p){ pSet[p] = true; });
+  Object.keys(teilnCount).forEach(function(p){ pSet[p] = true; });
+  var allPersons = Object.keys(pSet).sort(function(a,b) {
+    return ((kopfCount[b]||0)+(teilnCount[b]||0)) - ((kopfCount[a]||0)+(teilnCount[a]||0));
+  });
+
+  if (!allPersons.length) { el.innerHTML = ''; return; }
+
+  var top1      = allPersons[0];
+  var top1Total = (kopfCount[top1]||0) + (teilnCount[top1]||0);
+  var top1Kopf  = kopfCount[top1] || 0;
+
+  // FK vs MA Anteil im Top-10
+  var top10 = allPersons.slice(0, 10);
+  var top10FK = top10.filter(function(p){ return fkSet.has(p); }).length;
+  var top10MA = top10.length - top10FK;
+
+  // Zeitlast-Daten (nur wenn Dauer-Angaben vorhanden)
+  var zeitSum = {};
+  var hasDauer = false;
+  MEETINGS.forEach(function(m) {
+    if (m.dauer === null) return;
+    hasDauer = true;
+    var freq   = FREQ_MONTHLY[m.rhythmus_klasse] || 0.5;
+    var monMin = m.dauer * freq;
+    if (m.verantwortlich) zeitSum[m.verantwortlich] = (zeitSum[m.verantwortlich] || 0) + monMin;
+    m.teilnehmer.forEach(function(t) {
+      zeitSum[t] = (zeitSum[t] || 0) + monMin;
+    });
+  });
+
+  var zeitInsight = '';
+  if (hasDauer && Object.keys(zeitSum).length) {
+    var topZ = Object.keys(zeitSum).sort(function(a,b){ return zeitSum[b]-zeitSum[a]; })[0];
+    var topZH = Math.round(zeitSum[topZ] / 60 * 10) / 10;
+    zeitInsight = '<div class="komm-insight"><div class="komm-insight-label">Höchste Zeitlast</div>'
+      + '<div class="komm-insight-value">' + topZ + '</div>'
+      + '<div class="komm-insight-sub">' + topZH + ' Stunden/Monat in Meetings gebunden</div></div>';
+  }
+
+  el.innerHTML = '<div class="komm-briefing-card">'
+    + '<div class="tbr-header">'
+    + '<span class="tbr-title">Engpass – Auf einen Blick</span>'
+    + '<span class="tbr-sub">' + allPersons.length + ' Personen · ' + fkSet.size + ' Führungskräfte erfasst</span>'
+    + '</div>'
+    + '<div class="komm-insights-grid">'
+    + '<div class="komm-insight"><div class="komm-insight-label">Stärkst beanspruchte Person</div>'
+    + '<div class="komm-insight-value">' + top1 + '</div>'
+    + '<div class="komm-insight-sub">' + top1Total + ' Meetings gesamt'
+    + (top1Kopf ? ' · davon ' + top1Kopf + ' als Verantwortliche/r' : '') + '</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">FK-Anteil Top 10</div>'
+    + '<div class="komm-insight-value">' + top10FK + ' / ' + top10.length + '</div>'
+    + '<div class="komm-insight-sub">' + top10FK + ' Führungskraft' + (top10FK!==1?'räfte':'') + ' unter den meistbeschäftigten Personen</div></div>'
+    + zeitInsight
+    + '</div></div>';
 }
 
 // ── Datenpflege-Funktionen in separatem Block (Safari-Kompatibilität) ─────────
