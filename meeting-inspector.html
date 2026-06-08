@@ -629,7 +629,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "08.06.2026 12:33";
+const APP_VERSION = "08.06.2026 14:49";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1415,13 +1415,25 @@ function showTab(idx) {
   requestAnimationFrame(() => {
     setTimeout(() => {
       const panel = document.querySelector(`.panel[data-tab="${idx}"]`);
-      if (panel) panel.querySelectorAll(".plotly-graph-div").forEach(p => Plotly.Plots.resize(p));
+      if (panel) panel.querySelectorAll(".plotly-graph-div").forEach(p => {
+        if (p.offsetParent !== null && p.offsetWidth > 0) Plotly.Plots.resize(p);
+      });
     }, 50);
   });
 }
 
+// Einzige Resize-Quelle: gedrosselt, nur sichtbare Charts aus ihrer echten Breite neu zeichnen.
+// (responsive:true ist bewusst entfernt, um Plotlys Per-Chart-Listener auf versteckte
+//  display:none-Charts zu vermeiden, die sonst auf 0 Breite zusammenstauchen.)
+let _plotResizeTimer = null;
+function _resizeVisiblePlots() {
+  document.querySelectorAll(".plotly-graph-div").forEach(p => {
+    if (p.offsetParent !== null && p.offsetWidth > 0) Plotly.Plots.resize(p);
+  });
+}
 window.addEventListener("resize", () => {
-  document.querySelectorAll(".panel.active .plotly-graph-div").forEach(p => Plotly.Plots.resize(p));
+  clearTimeout(_plotResizeTimer);
+  _plotResizeTimer = setTimeout(_resizeVisiblePlots, 150);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1597,7 +1609,7 @@ function _plotNetzwerk(firstRender) {
 
   const chartEl = document.getElementById("chart-netzwerk");
   if (firstRender) {
-    Plotly.newPlot(chartEl, allTraces, layout, {responsive:true, displayModeBar:false, doubleClick:false});
+    Plotly.newPlot(chartEl, allTraces, layout, {displayModeBar:false, doubleClick:false});
     // Click: Verbindungen hervorheben (FK-Status nur im Personen-Tab ändern)
     chartEl.on("plotly_click", function(data) {
       if (!data.points.length) return;
@@ -1705,7 +1717,7 @@ function renderKalender() {
     legend: { title: { text: "Abteilung" }, orientation: "v", x: 1.02, xanchor: "left" },
     plot_bgcolor: "white", paper_bgcolor: "white",
     height: 460, margin: { l: 150, r: 20, t: 60, b: 40 }
-  }, { responsive: true, displayModeBar: false });
+  }, { displayModeBar: false });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1822,7 +1834,7 @@ function _renderOverlapHeatmap() {
     height:Math.max(520, n * 22), margin:{l:210,r:80,t:20,b:180},
     xaxis:{tickangle:-45,tickfont:{size:9}},
     yaxis:{tickfont:{size:9}}
-  }, {responsive:true, displayModeBar:false});
+  }, {displayModeBar:false});
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1875,7 +1887,7 @@ function renderAbtChart() {
     height: Math.max(320, yAbts.length * 36 + 120),
     margin: { l:150, r:160, t:50, b:50 }
   };
-  Plotly.react("chart-abt", traces, layout, { responsive:true, displayModeBar:false });
+  Plotly.react("chart-abt", traces, layout, { displayModeBar:false });
 
   const hint = document.getElementById("hint-abt");
   if (hint) hint.textContent = isFreq
@@ -1932,7 +1944,7 @@ function renderStatusVerteilung() {
     legend: { title: { text: "Status" } },
     plot_bgcolor: "white", paper_bgcolor: "white",
     height: 380, margin: { l: 60, r: 20, t: 60, b: 60 }
-  }, { responsive: true, displayModeBar: false });
+  }, { displayModeBar: false });
 }
 
 function renderRhythmusChart() {
@@ -1969,7 +1981,7 @@ function renderRhythmusChart() {
     legend: { title: { text: "Kategorie" } },
     plot_bgcolor: "white", paper_bgcolor: "white",
     height: 380, margin: { l: 60, r: 20, t: 60, b: 80 }
-  }, { responsive: true, displayModeBar: false });
+  }, { displayModeBar: false });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2121,7 +2133,7 @@ function renderSankey() {
              font:{size:13,family:"DM Sans, system-ui, sans-serif"}},
       font:{family:"DM Sans, system-ui, sans-serif"},
       height:440, margin:{l:20,r:20,t:60,b:30}
-    }, {responsive:true, displayModeBar:false});
+    }, {displayModeBar:false});
 
     const sankeyEl = document.getElementById("chart-sankey");
     const baseColors = [...linkColors];
@@ -2767,7 +2779,7 @@ function renderEngpass() {
     plot_bgcolor: "white", paper_bgcolor: "white",
     height: HEIGHT,
     margin: { l: 20, r: 20, t: 60, b: 60 }
-  }, { responsive: true, displayModeBar: false });
+  }, { displayModeBar: false });
   renderZeitlast();
 }
 
@@ -2851,7 +2863,7 @@ function renderZeitlast() {
     plot_bgcolor: "white", paper_bgcolor: "white",
     height: HEIGHT,
     margin: { l: 20, r: 20, t: 60, b: 60 }
-  }, { responsive: true, displayModeBar: false });
+  }, { displayModeBar: false });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2998,7 +3010,7 @@ function renderTreemap() {
     height:       520,
     plot_bgcolor:  "white",
     paper_bgcolor: "white"
-  }, { responsive: true, displayModeBar: false });
+  }, { displayModeBar: false });
 }
 
 // ── FK-Toggle ─────────────────────────────────────────────────────────────────
@@ -3112,7 +3124,7 @@ function renderWirkungsMatrix() {
     plot_bgcolor: "#fff", paper_bgcolor: "#fff",
     font: { family: "Inter, system-ui, sans-serif", size: 12, color: "#374151" },
     hovermode: "closest"
-  }, { responsive: true, displayModeBar: false });
+  }, { displayModeBar: false });
 
   _renderWirkungsBriefing(data, xVals, xMedian);
 }
@@ -3837,7 +3849,7 @@ function renderFlightLevels() {
       height: 200, margin: { l: 160, r: 40, t: 16, b: 40 },
       xaxis: { title: "Anzahl Meetings", zeroline: false, gridcolor: "#f1f5f9" },
       yaxis: { automargin: true, ticks: 'outside', ticklen: 5 }
-    }, { responsive: true, displayModeBar: false });
+    }, { displayModeBar: false });
 
     const a = document.getElementById("fl-alert-f1");
     if (a) {
@@ -3897,7 +3909,7 @@ function renderFlightLevels() {
         margin: { l: 140, r: 20, t: 20, b: 120 },
         xaxis: { tickangle: -40, automargin: true },
         yaxis: { automargin: true }
-      }, { responsive: true, displayModeBar: false });
+      }, { displayModeBar: false });
     }
 
     const a = document.getElementById("fl-alert-f2");
@@ -3944,7 +3956,7 @@ function renderFlightLevels() {
         height: 320, margin: { l: 50, r: 30, t: 16, b: 60 },
         yaxis: { title: "Wirkung (1–4)", range: [0.5, 4.5], dtick: 1, gridcolor: "#f1f5f9" },
         xaxis: { automargin: true }, showlegend: false
-      }, { responsive: true, displayModeBar: false });
+      }, { displayModeBar: false });
 
       const a = document.getElementById("fl-alert-f3");
       if (a) {
@@ -4001,7 +4013,7 @@ function renderFlightLevels() {
         margin: { l: 120, r: 40, t: 40, b: 20 },
         xaxis: { side: "top", automargin: true },
         yaxis: { automargin: true }
-      }, { responsive: true, displayModeBar: false });
+      }, { displayModeBar: false });
     }
 
     const a = document.getElementById("fl-alert-f4");
@@ -4063,7 +4075,7 @@ function renderFlightLevels() {
         xaxis: { categoryorder: "array", categoryarray: RHY_ORDER, tickangle: -30, automargin: true, gridcolor: "#f1f5f9" },
         yaxis: { categoryorder: "array", categoryarray: ["FL1","FL2","FL3"], automargin: true, gridcolor: "#f1f5f9" },
         plot_bgcolor: "#f8fafc"
-      }, { responsive: true, displayModeBar: false });
+      }, { displayModeBar: false });
     }
 
     const a = document.getElementById("fl-alert-f5");
