@@ -232,6 +232,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 .dept-col.special .dept-col-header{background:#6b7280 !important}
 .dept-col.special-stab .dept-col-header{background:#5b8fa8 !important}
 .dept-col.special-gl   .dept-col-header{background:#7c6bab !important}
+.dept-col.special-zuarbeitend .dept-col-header{background:#8aa06b !important}
 .dept-col.special-extern .dept-col-header{background:#6b7280 !important}
 .dept-col.special-kunden .dept-col-header{background:#c2607a !important}
 
@@ -629,7 +630,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "08.06.2026 17:31";
+const APP_VERSION = "08.06.2026 19:59";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -659,6 +660,7 @@ const FREQ_MONTHLY = {
 const SPECIAL_DEPTS = [
   { key: "Stabsfunktion",   label: "Stabsfunktion",   title: "Stab / andere interne Bereiche (Controller, Strategie, Cross-Dept.)", cssClass: "special-stab", color: "#5b8fa8" },
   { key: "Geschäftsleitung", label: "Geschäftsleitung", title: "C-Level / übergeordnete Führungsebene",                                   cssClass: "special-gl",   color: "#7c6bab" },
+  { key: "Zuarbeitend", label: "Zuarbeitend",  title: "Zuarbeitende / andere interne Abteilung, die nicht in der Tabelle gelistet ist (intern, nicht Extern)", cssClass: "special-zuarbeitend", color: "#8aa06b" },
   { key: "Extern",     label: "Extern",       title: "Externe Partner / Unternehmen",             cssClass: "special-extern",  color: "#6b7280" },
   { key: "Kunden",     label: "Kunden",       title: "Kunden / Endabnehmer",                      cssClass: "special-kunden",  color: "#c2607a" },
 ];
@@ -2629,7 +2631,7 @@ function openPersonPopover(person, anchorEl, event) {
     pop.appendChild(item);
   });
 
-  // Trennlinie + Sonder-Kategorien (Stabsfunktion, Geschäftsleitung, Extern, Kunden)
+  // Trennlinie + Sonder-Kategorien (Stabsfunktion, Geschäftsleitung, Zuarbeitend, Extern, Kunden)
   const sep2 = document.createElement("div");
   sep2.className = "person-popover-sep";
   pop.appendChild(sep2);
