@@ -461,6 +461,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <div class="toggle-grp">
       <button id="abt-btn-anzahl" class="active" onclick="setAbtMode('anzahl')">Anzahl</button>
       <button id="abt-btn-freq" onclick="setAbtMode('freq')">Freq./Monat</button>
+      <button id="abt-btn-rolle" onclick="setAbtMode('rolle')">Rolle: Gastgeber ↔ Teilnehmer</button>
     </div>
     <div class="chart-card" id="chart-abt"></div>
     <p class="hint" id="hint-abt">Balkenhöhe = Anzahl distinct Meeting-Formate · Farbe = Rhythmus · Hover = Meeting-Namen</p>
@@ -630,7 +631,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "08.06.2026 22:47";
+const APP_VERSION = "09.06.2026 21:53";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1861,8 +1862,10 @@ function setAbtMode(mode) {
   abtMode = mode;
   const btnAnzahl = document.getElementById("abt-btn-anzahl");
   const btnFreq   = document.getElementById("abt-btn-freq");
+  const btnRolle  = document.getElementById("abt-btn-rolle");
   if (btnAnzahl) btnAnzahl.classList.toggle("active", mode === "anzahl");
   if (btnFreq)   btnFreq.classList.toggle("active",   mode === "freq");
+  if (btnRolle)  btnRolle.classList.toggle("active",  mode === "rolle");
   renderAbtChart();
 }
 
@@ -1870,6 +1873,9 @@ function renderAbtChart() {
   const aktive = MEETINGS.filter(m => m.status === "Aktiv");
   const yAbts  = allDepts; // Abteilungen auf Y-Achse (horizontal)
   const isFreq = abtMode === "freq";
+
+  // ── Modus „Rolle": Gastgeber (eigene Formate) ↔ Teilnehmer (Gast in fremden Meetings) ──
+  if (abtMode === "rolle") { renderAbtRolleChart(aktive, yAbts); return; }
 
   const traces = RHYTHM_GROUPS.map(grp => {
     const xVals = yAbts.map(a => {
@@ -1910,6 +1916,65 @@ function renderAbtChart() {
   if (hint) hint.textContent = isFreq
     ? "Balkenlänge = Meetings/Monat · Farbe = Frequenz-Gruppe · Hover = Meeting-Namen"
     : "Balkenlänge = Anzahl Meeting-Formate · Farbe = Frequenz-Gruppe · Hover = Meeting-Namen";
+}
+
+// Modus „Rolle": divergierende Balken – rechts eigene Formate (Gastgeber),
+// links Gast-Teilnahmen in fremden Meetings (Teilnehmer). Rollen-Farben (Identität, kein Status).
+function renderAbtRolleChart(aktive, yAbts) {
+  const HOST_COL  = "#3f7d8c";  // Gastgeber – Teal-Blau
+  const GUEST_COL = "#b5793f";  // Teilnehmer – Ocker
+
+  const eigene = {}, gast = {};
+  yAbts.forEach(a => {
+    eigene[a] = aktive.filter(m => m.abteilung === a).length;
+    gast[a]   = aktive.filter(m => m.abteilung !== a
+                  && m.teilnehmer.some(t => effectivePersonAbt[t] === a)).length;
+  });
+
+  const hostTrace = {
+    type: "bar", name: "Gastgeber (eigene Formate)", orientation: "h",
+    y: yAbts, x: yAbts.map(a => eigene[a]),
+    marker: { color: HOST_COL, opacity: 0.9 },
+    hovertext: yAbts.map(a => `<b>${a}</b><br>Gastgeber: ${eigene[a]} eigene Format${eigene[a]!==1?"e":""}`),
+    hoverinfo: "text"
+  };
+  const guestTrace = {
+    type: "bar", name: "Teilnehmer (Gast in fremden Meetings)", orientation: "h",
+    y: yAbts, x: yAbts.map(a => -gast[a]),
+    marker: { color: GUEST_COL, opacity: 0.9 },
+    hovertext: yAbts.map(a => `<b>${a}</b><br>Teilnehmer: in ${gast[a]} fremden Meeting${gast[a]!==1?"s":""} vertreten`),
+    hoverinfo: "text"
+  };
+
+  // Symmetrische X-Achse mit absoluten Tick-Beschriftungen (links zeigt positive Zahlen)
+  const maxV = Math.max(1, ...yAbts.map(a => Math.max(eigene[a], gast[a])));
+  const step = Math.max(1, Math.ceil(maxV / 4));
+  const tickvals = [], ticktext = [];
+  for (let v = 0; v <= maxV; v += step) {
+    if (v === 0) { tickvals.push(0); ticktext.push("0"); continue; }
+    tickvals.push(v);  ticktext.push(String(v));
+    tickvals.push(-v); ticktext.push(String(v));
+  }
+
+  const layout = {
+    barmode: "relative",
+    title: { text: "Rolle pro Abteilung: Gastgeber ↔ Teilnehmer",
+             font: { size:16, family:"DM Sans, system-ui, sans-serif" } },
+    font: { family:"DM Sans, system-ui, sans-serif" },
+    yaxis: { automargin:true, tickfont:{ size:12 }, ticks: 'outside', ticklen: 5 },
+    xaxis: { title: "← Gast in fremden Meetings   ·   eigene Formate →",
+             tickvals, ticktext, zeroline:true, zerolinecolor:"#cbd5e1",
+             showgrid:true, gridcolor:"#f3f4f6" },
+    legend: { orientation:"h", x:0, xanchor:"left", y:1.08, yanchor:"bottom" },
+    plot_bgcolor:"white", paper_bgcolor:"white",
+    height: Math.max(320, yAbts.length * 36 + 120),
+    margin: { l:150, r:40, t:70, b:60 }
+  };
+  Plotly.react("chart-abt", [guestTrace, hostTrace], layout, { displayModeBar:false });
+
+  const hint = document.getElementById("hint-abt");
+  if (hint) hint.textContent = "Rechts = selbst veranstaltete Formate (Gastgeber) · "
+    + "links = Teilnahme an fremden Meetings (Teilnehmer). Lange linke, kurze rechte Balken = stark eingebunden, aber kein großer Gastgeber.";
 }
 
 function renderAbteilung() {
@@ -3264,18 +3329,35 @@ function _renderAbteilungsBriefing() {
       + '<div class="komm-insight-sub">Ø ' + bestWirkVal + ' / 4 auf Basis von ' + wirkN[bestWirkAbt] + ' bewerteten Meetings</div></div>'
     : '';
 
+  // Stärkster Netzwerker: meiste Teilnahmen an FREMDEN Meetings (Hauptabteilungen, ohne Sonder-Kategorien)
+  var mainAbts = abts.filter(function(a){ return !SPECIAL_DEPTS.find(function(s){ return s.key === a; }); });
+  var gastN = {};
+  mainAbts.forEach(function(a) {
+    gastN[a] = aktive.filter(function(m){
+      return m.abteilung !== a && m.teilnehmer.some(function(t){ return effectivePersonAbt[t] === a; });
+    }).length;
+  });
+  var netzAbts = mainAbts.slice().sort(function(a,b){ return gastN[b]-gastN[a]; });
+  var topNetz = (netzAbts.length && gastN[netzAbts[0]] > 0) ? netzAbts[0] : null;
+  var netzInsight = topNetz
+    ? '<div class="komm-insight"><div class="komm-insight-label">Stärkster Netzwerker</div>'
+      + '<div class="komm-insight-value">' + topNetz + '</div>'
+      + '<div class="komm-insight-sub">in ' + gastN[topNetz] + ' fremden Meetings vertreten – breit eingebunden, auch ohne viele eigene Formate</div></div>'
+    : '';
+
   el.innerHTML = '<div class="komm-briefing-card">'
     + '<div class="tbr-header">'
     + '<span class="tbr-title">Abteilungen – Auf einen Blick</span>'
     + '<span class="tbr-sub">' + aktive.length + ' aktive Meetings · ' + abts.length + ' Abteilungen</span>'
     + '</div>'
     + '<div class="komm-insights-grid">'
-    + '<div class="komm-insight"><div class="komm-insight-label">Meiste Meetings</div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Meiste eigene Formate</div>'
     + '<div class="komm-insight-value">' + topAbt + '</div>'
-    + '<div class="komm-insight-sub">' + abtCounts[topAbt] + ' aktive Meeting-Formate</div></div>'
-    + '<div class="komm-insight"><div class="komm-insight-label">Wenigste Meetings</div>'
+    + '<div class="komm-insight-sub">' + abtCounts[topAbt] + ' selbst veranstaltete Meeting-Formate</div></div>'
+    + '<div class="komm-insight"><div class="komm-insight-label">Schlankste eigene Meeting-Struktur</div>'
     + '<div class="komm-insight-value">' + leastAbt + '</div>'
-    + '<div class="komm-insight-sub">' + abtCounts[leastAbt] + ' aktive Meeting-Formate</div></div>'
+    + '<div class="komm-insight-sub">' + abtCounts[leastAbt] + ' eigene Formate – sagt nichts über die Einbindung in fremde Meetings aus (siehe „Stärkster Netzwerker")</div></div>'
+    + netzInsight
     + '<div class="komm-insight"><div class="komm-insight-label">Abteilungsübergreifend</div>'
     + '<div class="komm-insight-value">' + uebergrPct + '%</div>'
     + '<div class="komm-insight-sub">' + uebergr + ' von ' + aktive.length + ' Meetings verbinden mehrere Abteilungen</div></div>'
