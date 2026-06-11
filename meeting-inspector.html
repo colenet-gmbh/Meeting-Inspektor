@@ -631,7 +631,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "09.06.2026 21:53";
+const APP_VERSION = "11.06.2026 14:18";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1337,7 +1337,7 @@ const TAB_INFO = {
        achten: "Orangene/rote Felder zeigen Meetings mit fast gleichen Teilnehmergruppen – Kandidaten für Zusammenlegung.",
        folgefragen: "Warum haben diese zwei Meetings fast dieselben Teilnehmer? Könnten sie zusammengelegt oder besser abgestimmt werden?" },
   6: { title: "Meeting-Last pro Person (Engpass)",
-       was: "Balken = Stunden/Monat. Blau = als Verantwortliche/r (inkl. geschätzter Vorbereitungszeit), Teal = als Teilnehmer/in.",
+       was: "Zwei getrennte Rollen-Balken pro Person: Blau = als Verantwortliche/r, Teal = als Teilnehmer/in (nicht addieren – bei Doppelrolle meinen beide dieselbe Meeting-Zeit). Das Briefing oben zählt jedes Meeting nur einmal.",
        achten: "Sehr lange Balken signalisieren Überlastungsrisiko. Viel Blau = hohe Verantwortungslast durch Meetingführung.",
        folgefragen: "Wer ist am stärksten belastet? Ist die Last fair verteilt? Welche Meetings könnten delegiert werden?" },
   7: { title: "Zeitverteilung (Personen-Stunden/Monat)",
@@ -3431,46 +3431,38 @@ function _renderEngpassBriefing() {
   if (!el) return;
   if (!MEETINGS.length) { el.innerHTML = ''; return; }
 
-  // Meeting-Anzahl pro Person (alle Meetings, kein Mode-Filter – Briefing zeigt Gesamtbild)
-  var kopfCount = {}, teilnCount = {};
+  // Distinkte Meeting-Beteiligung pro Person: jedes Meeting zählt EINMAL – auch wenn
+  // jemand zugleich Verantwortliche/r und Teilnehmer/in ist (keine Doppelzählung).
+  // (alle Meetings, kein Mode-Filter – Briefing zeigt Gesamtbild)
+  var distinctCount = {}, kopfCount = {}, zeitSum = {};
+  var hasDauer = false;
   MEETINGS.forEach(function(m) {
     if (m.verantwortlich) kopfCount[m.verantwortlich] = (kopfCount[m.verantwortlich] || 0) + 1;
-    m.teilnehmer.forEach(function(t) {
-      teilnCount[t] = (teilnCount[t] || 0) + 1;
+    var beteiligte = {};
+    if (m.verantwortlich) beteiligte[m.verantwortlich] = true;
+    m.teilnehmer.forEach(function(t){ beteiligte[t] = true; });
+    var monMin = null;
+    if (m.dauer !== null) { hasDauer = true; monMin = m.dauer * (FREQ_MONTHLY[m.rhythmus_klasse] || 0.5); }
+    Object.keys(beteiligte).forEach(function(p) {
+      distinctCount[p] = (distinctCount[p] || 0) + 1;
+      if (monMin !== null) zeitSum[p] = (zeitSum[p] || 0) + monMin;
     });
   });
 
-  var pSet = {};
-  Object.keys(kopfCount).forEach(function(p){ pSet[p] = true; });
-  Object.keys(teilnCount).forEach(function(p){ pSet[p] = true; });
-  var allPersons = Object.keys(pSet).sort(function(a,b) {
-    return ((kopfCount[b]||0)+(teilnCount[b]||0)) - ((kopfCount[a]||0)+(teilnCount[a]||0));
+  var allPersons = Object.keys(distinctCount).sort(function(a,b) {
+    return distinctCount[b] - distinctCount[a];
   });
 
   if (!allPersons.length) { el.innerHTML = ''; return; }
 
   var top1      = allPersons[0];
-  var top1Total = (kopfCount[top1]||0) + (teilnCount[top1]||0);
+  var top1Total = distinctCount[top1];   // distinkt – jedes Meeting einmal
   var top1Kopf  = kopfCount[top1] || 0;
 
   // FK vs MA Anteil im Top-10
   var top10 = allPersons.slice(0, 10);
   var top10FK = top10.filter(function(p){ return fkSet.has(p); }).length;
   var top10MA = top10.length - top10FK;
-
-  // Zeitlast-Daten (nur wenn Dauer-Angaben vorhanden)
-  var zeitSum = {};
-  var hasDauer = false;
-  MEETINGS.forEach(function(m) {
-    if (m.dauer === null) return;
-    hasDauer = true;
-    var freq   = FREQ_MONTHLY[m.rhythmus_klasse] || 0.5;
-    var monMin = m.dauer * freq;
-    if (m.verantwortlich) zeitSum[m.verantwortlich] = (zeitSum[m.verantwortlich] || 0) + monMin;
-    m.teilnehmer.forEach(function(t) {
-      zeitSum[t] = (zeitSum[t] || 0) + monMin;
-    });
-  });
 
   var zeitInsight = '';
   if (hasDauer && Object.keys(zeitSum).length) {
@@ -3489,7 +3481,7 @@ function _renderEngpassBriefing() {
     + '<div class="komm-insights-grid">'
     + '<div class="komm-insight"><div class="komm-insight-label">Stärkst beanspruchte Person</div>'
     + '<div class="komm-insight-value">' + top1 + '</div>'
-    + '<div class="komm-insight-sub">' + top1Total + ' Meetings gesamt'
+    + '<div class="komm-insight-sub">' + top1Total + ' Meetings'
     + (top1Kopf ? ' · davon ' + top1Kopf + ' als Verantwortliche/r' : '') + '</div></div>'
     + '<div class="komm-insight"><div class="komm-insight-label">FK-Anteil Top 10</div>'
     + '<div class="komm-insight-value">' + top10FK + ' / ' + top10.length + '</div>'
