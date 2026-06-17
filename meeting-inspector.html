@@ -667,7 +667,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "17.06.2026 14:03";
+const APP_VERSION = "17.06.2026 14:07";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -3795,8 +3795,15 @@ function renderGruppenTeilnehmerSection() {
     return m.gruppenTeilnehmer.map(function(g) { return { m: m, g: g }; });
   });
 
+  // Auch nonPersons die nur als Verantwortliche(r) vorkommen (nicht in Teilnehmerliste)
+  const teilnehmerGroupNames = new Set(entries.map(function(e) { return e.g; }));
+  MEETINGS.forEach(function(m) {
+    if (m.verantwortlich && _nonPersons.has(m.verantwortlich) && !teilnehmerGroupNames.has(m.verantwortlich)) {
+      entries.push({ m: m, g: m.verantwortlich, isVerantwortlich: true });
+    }
+  });
+
   // Verwaiste nonPersons: manuell markiert, aber in aktuellen Daten nicht vorhanden
-  // Alle Namen in den aktuellen Daten (Teilnehmer + Verantwortliche)
   const allDataNames = new Set(MEETINGS.flatMap(function(m) {
     return [...m.teilnehmer, m.verantwortlich].filter(Boolean);
   }));
@@ -3818,7 +3825,7 @@ function renderGruppenTeilnehmerSection() {
       + '<\/div>'
     : '';
 
-  if (withGroups.length === 0) {
+  if (entries.length === 0) {
     section.innerHTML = '<p class="dp-section-title">Datenqualität: Gruppen-Bezeichnungen <span class="dp-count-badge dp-count-ok">Keine erkannt</span><\/p>'
       + '<p class="dp-section-desc" style="color:#059669;margin-bottom:' + (orphaned.length ? '12px' : '0') + '">&#10003; Alle Teilnehmer sind eindeutige Personen – keine unklaren Bezeichnungen gefunden.<\/p>'
       + orphanedHTML;
@@ -3829,6 +3836,9 @@ function renderGruppenTeilnehmerSection() {
     const m = e.m;
     const farbe = effectiveAbtFarben[m.abteilung] || "#9ca3af";
     const isManual = _nonPersons.has(e.g);
+    const rollenBadge = e.isVerantwortlich
+      ? '<span style="font-size:.68rem;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:1px 6px">Verantwortliche(r)<\/span> '
+      : '';
     const herkunftBadge = isManual
       ? '<span style="font-size:.68rem;background:#f3e8ff;color:#7e22ce;border:1px solid #d8b4fe;border-radius:4px;padding:1px 6px">manuell markiert<\/span>'
       + '<button onclick="toggleNonPerson(\'' + e.g.replace(/'/g,"\\'") + '\')" style="font-size:.68rem;background:none;border:1px solid #d1d5db;border-radius:4px;padding:1px 6px;cursor:pointer;color:#6b7280;margin-left:2px">&#8617; Rückgängig<\/button>'
@@ -3837,6 +3847,7 @@ function renderGruppenTeilnehmerSection() {
       + '<span class="abt-badge" style="font-size:.7rem;padding:1px 6px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + m.abteilung + '<\/span>'
       + '<span style="font-size:.82rem;font-weight:600;color:#1a2e2c">' + m.name + '<\/span>'
       + '<span style="font-size:.78rem;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:4px;padding:1px 7px;font-weight:600">' + e.g + '<\/span>'
+      + rollenBadge
       + herkunftBadge
       + '<\/div>';
   }).join("");
