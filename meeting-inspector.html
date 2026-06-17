@@ -654,7 +654,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "16.06.2026 14:49";
+const APP_VERSION = "16.06.2026 15:02";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -3671,49 +3671,71 @@ function renderGruppenTeilnehmerSection() {
       <p class="dp-section-desc" style="color:#059669;margin-bottom:0">✓ Alle Teilnehmer sind einzelne Personen – keine Gruppen-Platzhalter erkannt.</p>`;
     return;
   }
-  const allPersons = [...new Set(Object.keys(effectivePersonAbt))].sort();
+  // Nur ECHTE Personen als Auflösungs-Kandidaten (keine anderen Platzhalter wie „Alle", „??")
+  const realPersons = [...new Set(Object.keys(effectivePersonAbt))].filter(p => !isGruppenParticipant(p)).sort();
   const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
   const aufloesungen = cfg.gruppenAufloesungen || {};
-  // Zeilen vorab berechnen (kein nested Template-Literal in ${} – Safari-Kompatibilität)
-  const rowsHTML = withGroups.flatMap(function(m) {
+
+  // Einträge (Meeting × Platzhalter) sammeln; offene zuerst
+  const entries = withGroups.flatMap(function(m) {
     return m.gruppenTeilnehmer.map(function(g) {
       const key = m.abteilung + "||" + m.name + "||" + g;
-      const cur = aufloesungen[key] || [];
-      const farbe = effectiveAbtFarben[m.abteilung] || "#9ca3af";
-      // Checkboxen statt Multiselect (intuitiver)
-      const checkboxes = allPersons.map(function(p) {
-        var chk = cur.includes(p) ? ' checked' : '';
-        return '<label style="display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;font-size:.79rem">'
-          + '<input type="checkbox" value="' + p + '"' + chk + ' style="cursor:pointer">' + p + '<\/label>';
-      }).join("");
-      return '<div class="dp-gruppen-row">'
-        + '<div class="dp-gruppen-meeting">'
-        + '<span class="abt-badge" style="font-size:.7rem;padding:1px 5px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + m.abteilung + '<\/span>'
-        + '<strong style="font-size:.83rem">' + m.name + '<\/strong>'
-        + '<span class="kat-pill" style="background:#fef3c7;color:#92400e;border-color:#fcd34d">⚑ ' + g + '<\/span>'
-        + (cur.length > 0
-            ? '<span style="font-size:.72rem;color:#059669;font-weight:600">✓ ' + cur.length + ' Person' + (cur.length===1?'':'en') + ' aufgelöst<\/span>'
-            : '<span style="font-size:.72rem;color:#d97706">⚠ noch nicht aufgelöst<\/span>')
-        + '<\/div>'
-        + '<div style="font-size:.74rem;color:#6b7280;margin-bottom:6px">Falls dieser Platzhalter eine variable Rolle ist (z.B. „Ticket-Owner"), leer lassen – das Meeting bleibt in Abteilungs- und Zeitanalysen erhalten.<\/div>'
-        + '<div class="dp-gruppen-assign">'
-        + '<div class="dp-gruppen-checklist" data-key="' + key + '" style="max-height:160px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;background:#f9fafb;min-width:160px">' + checkboxes + '<\/div>'
-        + '<div>'
-        + '<button class="btn-secondary" style="font-size:.76rem" onclick="saveGruppenAufloesung(this)">Speichern<\/button>'
-        + (cur.length > 0
-            ? '<div style="margin-top:6px;font-size:.73rem;color:#059669">✓ Aufgelöst – ' + cur.length + ' Person' + (cur.length===1?'':'en') + ' werden in den Charts berücksichtigt<\/div>'
-            : '<div style="margin-top:6px;font-size:.73rem;color:#d97706">⚠ Noch nicht aufgelöst – Gruppe bleibt als Platzhalter<\/div>')
-        + '<\/div>'
-        + '<\/div><\/div>';
+      return { m: m, g: g, key: key, cur: aufloesungen[key] || [] };
     });
+  });
+  const total = entries.length;
+  const resolved = entries.filter(function(e){ return e.cur.length > 0; }).length;
+  entries.sort(function(a, b){ return (a.cur.length > 0 ? 1 : 0) - (b.cur.length > 0 ? 1 : 0); });
+
+  // Zeilen vorab berechnen (kein nested Template-Literal in ${} – Safari-Kompatibilität)
+  const rowsHTML = entries.map(function(e) {
+    const m = e.m, g = e.g, key = e.key, cur = e.cur;
+    const farbe = effectiveAbtFarben[m.abteilung] || "#9ca3af";
+    // Personen der Meeting-Abteilung zuerst, dann übrige
+    const inDept = realPersons.filter(function(p){ return effectivePersonAbt[p] === m.abteilung; });
+    const others = realPersons.filter(function(p){ return effectivePersonAbt[p] !== m.abteilung; });
+    const checkboxes = inDept.concat(others).map(function(p) {
+      var chk = cur.includes(p) ? ' checked' : '';
+      return '<label style="display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;font-size:.79rem">'
+        + '<input type="checkbox" value="' + p + '"' + chk + ' style="cursor:pointer">' + p + '<\/label>';
+    }).join("");
+    const statusBadge = cur.length > 0
+      ? '<span style="font-size:.72rem;color:#059669;font-weight:600">✓ ' + cur.length + ' Person' + (cur.length===1?'':'en') + ' aufgelöst<\/span>'
+      : '<span style="font-size:.72rem;color:#d97706;font-weight:600">⚠ noch nicht aufgelöst<\/span>';
+    return '<div class="dp-gruppen-row">'
+      + '<div class="dp-gruppen-meeting">'
+      + '<span class="abt-badge" style="font-size:.7rem;padding:1px 5px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + m.abteilung + '<\/span>'
+      + '<strong style="font-size:.83rem">' + m.name + '<\/strong>'
+      + '<span class="kat-pill" style="background:#fef3c7;color:#92400e;border-color:#fcd34d">⚑ ' + g + '<\/span>'
+      + statusBadge
+      + '<\/div>'
+      + '<input type="text" placeholder="Tippen zum Filtern…" oninput="_filterGruppenList(this)" style="width:100%;max-width:280px;margin:6px 0 4px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;font-family:inherit;font-size:.78rem;box-sizing:border-box">'
+      + '<div class="dp-gruppen-checklist" data-key="' + key + '" style="max-height:160px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;background:#f9fafb">' + checkboxes + '<\/div>'
+      + '<button class="btn-secondary" style="font-size:.76rem;margin-top:8px" onclick="saveGruppenAufloesung(this)">Speichern<\/button>'
+      + '<\/div>';
   }).join("");
-  section.innerHTML = '<p class="dp-section-title">Gruppen-Teilnehmer <span class="dp-count-badge dp-count-warn">' + withGroups.length + ' Meetings<\/span><\/p>'
-    + '<p class="dp-section-desc">Auflösbare Platzhalter (z.B. „PC alle" = echte Personen) hier zuordnen. Variable Rollen (z.B. „Ticket-Owner", „Kundenbetreuer") leer lassen – diese Meetings bleiben in Abteilungs- und Zeitanalysen erhalten, werden aber von der Personenanalyse ausgeschlossen.<\/p>'
+
+  const badgeClass = resolved >= total ? 'dp-count-ok' : 'dp-count-warn';
+  section.innerHTML = '<p class="dp-section-title">Gruppen-Teilnehmer <span class="dp-count-badge ' + badgeClass + '">' + resolved + ' / ' + total + ' aufgelöst<\/span><\/p>'
+    + '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:.8rem;color:#1e40af;line-height:1.5">'
+    + '💡 <strong>Am besten direkt in der Quelltabelle pflegen.</strong> Dieses Panel ist nur für Sonderfälle, die sich dort <strong>nicht</strong> abbilden lassen.<\/div>'
+    + '<p class="dp-section-desc">Auflösbare Platzhalter (z.B. „PC alle" = echte Personen) den echten Personen zuordnen. Variable Rollen (z.B. „Ticket-Owner") leer lassen – das Meeting bleibt in Abteilungs- und Zeitanalysen erhalten, wird aber von der Personenanalyse ausgeschlossen.<\/p>'
     + rowsHTML;
 }
 
+// Filtert die Personen-Checkboxen einer Gruppen-Zeile per Tippen
+function _filterGruppenList(input) {
+  const list = input.nextElementSibling;
+  if (!list) return;
+  const q = input.value.trim().toLowerCase();
+  list.querySelectorAll('label').forEach(function(l){
+    l.style.display = l.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+  });
+}
+
 function saveGruppenAufloesung(btn) {
-  const checklist = btn.previousElementSibling;
+  const row = btn.closest('.dp-gruppen-row');
+  const checklist = row ? row.querySelector('.dp-gruppen-checklist') : btn.previousElementSibling;
   const key = checklist.dataset.key;
   const selected = [...checklist.querySelectorAll('input[type=checkbox]:checked')].map(function(cb){ return cb.value; });
   const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
