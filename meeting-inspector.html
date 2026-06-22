@@ -148,7 +148,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   border-radius:8px;font-family:inherit;font-size:.85rem;outline:none}
 #table-search:focus{border-color:#59B2A5;box-shadow:0 0 0 3px rgba(89,178,165,0.18)}
 .table-meta{font-size:.8rem;color:#94a3b8}
-.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0}
+.table-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);border-radius:8px;border:1px solid #e2e8f0}
 #meeting-table{width:100%;border-collapse:collapse;font-size:.82rem}
 #meeting-table thead th{background:#246b61;color:white;padding:10px 12px;
   text-align:left;font-weight:600;white-space:nowrap;position:sticky;top:0}
@@ -667,7 +667,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "17.06.2026 14:07";
+const APP_VERSION = "22.06.2026 13:19";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -3641,6 +3641,10 @@ function renderMeinInputSection() {
     }
     if (!m.infofluss || !m.infofluss.trim()) {
       issues.push('<span style="font-size:.74rem;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:4px;padding:1px 7px">Infofluss fehlt</span>');
+    }
+    var KEIN_TAG_NOETIG = ['täglich', 'variabel'];
+    if (KEIN_TAG_NOETIG.indexOf(m.rhythmus_klasse) === -1 && (!m.wochentage || m.wochentage.length === 0)) {
+      issues.push('<span style="font-size:.74rem;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:4px;padding:1px 7px">Wochentag fehlt</span>');
     }
     if (issues.length > 0) {
       withIssues.push({ m: m, issueHTML: issues.join(' ') });
