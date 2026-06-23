@@ -98,7 +98,7 @@ Alle Einstellungen werden im `localStorage` des Browsers gespeichert und bleiben
 
 ## Testdaten
 
-[`testdaten.tsv`](https://raw.githubusercontent.com/braunle77/Organisations-Meeting-Informationsfluss/main/testdaten.tsv) enthält 73 fiktive Meetings für einen Schnelltest ohne echte Daten.
+[`testdaten.tsv`](https://raw.githubusercontent.com/braunle77/Meeting-Inspektor/main/testdaten.tsv) enthält 73 fiktive Meetings für einen Schnelltest ohne echte Daten.
 
 ---
 
