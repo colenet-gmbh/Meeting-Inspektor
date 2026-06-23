@@ -667,7 +667,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "23.06.2026 10:51";
+const APP_VERSION = "23.06.2026 11:11";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -4315,7 +4315,7 @@ function renderFlightLevels() {
     });
     const bridge = Object.entries(pFlH)
       .filter(([, h]) => [h.FL1 > 0, h.FL2 > 0, h.FL3 > 0].filter(Boolean).length >= 2)
-      .sort((a, b) => (b[1].FL1+b[1].FL2+b[1].FL3) - (a[1].FL1+a[1].FL2+a[1].FL3))
+      .sort((a, b) => b[1].FL2 - a[1].FL2)
       .slice(0, 25);
 
     if (bridge.length === 0) {
@@ -4339,7 +4339,7 @@ function renderFlightLevels() {
         height: Math.max(220, bridge.length * 26 + 80),
         margin: { l: 120, r: 40, t: 40, b: 20 },
         xaxis: { side: "top", automargin: true },
-        yaxis: { automargin: true }
+        yaxis: { automargin: true, autorange: "reversed" }
       }, { displayModeBar: false });
     }
 
