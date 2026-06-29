@@ -20,7 +20,7 @@ Das Dashboard ist als Gesprächsgrundlage für Management-Reviews gedacht, nicht
 
 ## Schnellstart
 
-1. [`meeting-inspektor.html`](https://raw.githubusercontent.com/braunle77/Meeting-Inspektor/main/meeting-inspektor.html) herunterladen (Rechtsklick → „Ziel speichern unter") und im Browser öffnen
+1. [`meeting-inspektor.html`](https://raw.githubusercontent.com/colenet-gmbh/Meeting-Inspektor/main/meeting-inspektor.html) herunterladen (Rechtsklick → „Ziel speichern unter") und im Browser öffnen
 2. Daten laden – zwei Wege:
 
 **Option A – Paste aus Confluence:**
@@ -98,7 +98,7 @@ Alle Einstellungen werden im `localStorage` des Browsers gespeichert und bleiben
 
 ## Testdaten
 
-[`testdaten.tsv`](https://raw.githubusercontent.com/braunle77/Meeting-Inspektor/main/testdaten.tsv) enthält 73 fiktive Meetings für einen Schnelltest ohne echte Daten.
+[`testdaten.tsv`](https://raw.githubusercontent.com/colenet-gmbh/Meeting-Inspektor/main/testdaten.tsv) enthält 73 fiktive Meetings für einen Schnelltest ohne echte Daten.
 
 ---
 
