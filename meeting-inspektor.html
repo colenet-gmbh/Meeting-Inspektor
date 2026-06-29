@@ -667,7 +667,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "23.06.2026 11:41";
+const APP_VERSION = "29.06.2026 21:49";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1571,15 +1571,15 @@ function _plotNetzwerk(firstRender) {
     const deg   = degree[p] || 0;
     const isFk  = fkSet.has(p);
     const pMtgs = personMeetings[p] || [];
-    const hover = `<b>${p}</b>${isFk ? " ★" : ""} · ${abt}${sub ? " / "+sub : ""}<br>` +
-      `Meetings (${pMtgs.length}): ` + pMtgs.slice(0,6).join(", ") + (pMtgs.length > 6 ? "…" : "");
+    const fullName = effectivePersonAbt[p] ? `${p} · ${abt}${sub ? " / "+sub : ""}${isFk ? " ★" : ""}` : p;
+    const hover = `<b>${fullName}</b><br>Meetings (${pMtgs.length}): ` + pMtgs.slice(0,6).join(", ") + (pMtgs.length > 6 ? "…" : "");
     return {
       x:[pos[p][0]], y:[pos[p][1]],
       mode:"markers+text",
-      text:[p], textposition:"top center",
-      textfont:{size:9, color:"#374151"},
+      text:[p], textposition:"middle center",
+      textfont:{size:12, color:"white", family:"DM Mono, monospace", weight:"bold"},
       marker:{
-        size: 10 + pMtgs.length * 3.5,  // Meeting-Anzahl (nicht Degree)
+        size: 50 + pMtgs.length * 1.5,
         color: effectiveAbtFarben[abt] || "#9ca3af",
         symbol: isFk ? "star" : "circle",
         line:{width: isFk ? 2 : 1, color:"white"},
