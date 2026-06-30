@@ -667,7 +667,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "30.06.2026 13:51";
+const APP_VERSION = "30.06.2026 13:56";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -3187,12 +3187,18 @@ function renderTreemap() {
   if (hint) hint.textContent =
     `Fläche = monatliche Personen-Stunden · Äußerer Rahmen = Kategorie (dunkler) · Innen = Meeting (heller) · Klick = Drill-down${suffix}`;
 
-  // Display-Labels: Kategorie-Rahmen ohne Umbruch (schmale Balken schneiden
-  // Zeilen ab), Meeting-Boxen mit Wortumbruch (erst umbrechen, dann skaliert
-  // Plotly pro Box). uniformtext minsize: 9 blendet unlesbare Winzlinge aus.
-  const displayText = ids.map((id, i) =>
-    id.startsWith('cat::') ? labels[i] : _wrapLabel(labels[i], 12)
-  );
+  // Display-Labels: Kategorie-Rahmen truncaten (schmale Balken schneiden Zeilen
+  // ab – lieber „…" als abgehackte Silben), Meeting-Boxen umbrechen.
+  // Kein uniformtext → Plotly skaliert jede Box individuell; große Boxen
+  // behalten ihre angemessene Schriftgröße.
+  const CAT_MAX = 14;
+  const displayText = ids.map(function(id, i) {
+    if (id.startsWith('cat::')) {
+      var lbl = labels[i];
+      return lbl.length > CAT_MAX ? lbl.slice(0, CAT_MAX - 1) + '…' : lbl;
+    }
+    return _wrapLabel(labels[i], 12);
+  });
 
   // ── Variante A: Treemap ───────────────────────────────────────────────────
   Plotly.react("chart-treemap", [{
@@ -3203,8 +3209,7 @@ function renderTreemap() {
     marker:       { colors, line: { width: 1, color: "white" }, cornerradius: 6 },
     customdata, hovertemplate: htmpl,
     texttemplate:  "%{text}",
-    insidetextfont: { size: 12, family: "DM Sans, system-ui, sans-serif", color: "auto" },
-    uniformtext:   { mode: "hide", minsize: 9 }
+    insidetextfont: { size: 12, family: "DM Sans, system-ui, sans-serif", color: "auto" }
   }], {
     font:         { family: "DM Sans, system-ui, sans-serif" },
     margin:       { l: 0, r: 0, t: 10, b: 10 },
