@@ -16,5 +16,5 @@ jobs:
         env:
           MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
         run: |
-          git config --global --unset-all http.https://github.com/.extraheader 2>/dev/null || true
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
           git push "https://braunle77:${MIRROR_TOKEN}@github.com/braunle77/Meeting-Inspektor.git" HEAD:main --force
