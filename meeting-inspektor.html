@@ -667,7 +667,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "30.06.2026 13:26";
+const APP_VERSION = "30.06.2026 13:36";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -3039,6 +3039,29 @@ function renderZeitlast() {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 10: Zeitverteilung – Treemap (A2)
 // ══════════════════════════════════════════════════════════════════════════════
+
+// Bricht einen Label-String an Wortgrenzen um (kein Silbentrennzeichen).
+// maxChars: Zielbreite in Zeichen – erst umbrechen, dann Plotly die Schriftgröße
+// reduzieren lassen.
+function _wrapLabel(str, maxChars) {
+  var words = str.split(' ');
+  var lines = [];
+  var cur = '';
+  for (var i = 0; i < words.length; i++) {
+    var w = words[i];
+    if (!cur) {
+      cur = w;
+    } else if ((cur + ' ' + w).length <= maxChars) {
+      cur += ' ' + w;
+    } else {
+      lines.push(cur);
+      cur = w;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines.join('<br>');
+}
+
 function _renderTreemapBriefing(withHours) {
   var el = document.getElementById("treemap-briefing");
   if (!el) return;
@@ -3164,16 +3187,20 @@ function renderTreemap() {
   if (hint) hint.textContent =
     `Fläche = monatliche Personen-Stunden · Äußerer Rahmen = Kategorie (dunkler) · Innen = Meeting (heller) · Klick = Drill-down${suffix}`;
 
+  // Display-Labels mit Zeilenumbrüchen vorverarbeiten (erst umbrechen, dann
+  // skaliert Plotly pro Box die Schriftgröße – kein einheitliches Ausblenden).
+  const displayText = labels.map(l => _wrapLabel(l, 12));
+
   // ── Variante A: Treemap ───────────────────────────────────────────────────
   Plotly.react("chart-treemap", [{
     type:         "treemap",
     ids, labels, parents, values,
+    text:          displayText,
     branchvalues: "total",
     marker:       { colors, line: { width: 1, color: "white" }, cornerradius: 6 },
     customdata, hovertemplate: htmpl,
-    texttemplate:  "%{label}",
-    insidetextfont: { size: 13, family: "DM Sans, system-ui, sans-serif", color: "auto" },
-    uniformtext:   { mode: "hide", minsize: 12 }
+    texttemplate:  "%{text}",
+    insidetextfont: { size: 12, family: "DM Sans, system-ui, sans-serif", color: "auto" }
   }], {
     font:         { family: "DM Sans, system-ui, sans-serif" },
     margin:       { l: 0, r: 0, t: 10, b: 10 },
