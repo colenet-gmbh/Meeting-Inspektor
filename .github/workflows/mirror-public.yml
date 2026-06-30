@@ -13,6 +13,9 @@ jobs:
           fetch-depth: 0
 
       - name: Push mirror to braunle77/Meeting-Inspektor
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
         run: |
-          git remote add public https://x-access-token:${{ secrets.MIRROR_TOKEN }}@github.com/braunle77/Meeting-Inspektor.git
-          git push public HEAD:main --force
+          git config --global credential.helper store
+          echo "https://braunle77:${MIRROR_TOKEN}@github.com" > ~/.git-credentials
+          git push https://github.com/braunle77/Meeting-Inspektor.git HEAD:main --force
