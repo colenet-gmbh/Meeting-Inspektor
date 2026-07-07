@@ -674,7 +674,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "07.07.2026 21:00";
+const APP_VERSION = "07.07.2026 21:27";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -714,6 +714,46 @@ function monthlyHours(m) { return (m.dauer ? m.dauer / 60 : 1) * freqMonthly(m);
 function activeMeetings() { return MEETINGS.filter(m => m.status === "Aktiv"); }
 function round1(n) { return Math.round(n * 10) / 10; }
 function round2(n) { return Math.round(n * 100) / 100; }
+
+// ── Semantische Farben (JS-Charts; CSS-Farben bleiben bewusst separat) ────────
+const COLORS = {
+  lead:        "#2176ae",  // Rolle: Verantwortliche/r (Blau)
+  participant: "#59B2A5",  // Rolle: Teilnehmer/in (Brand-Teal)
+  neutral:     "#9ca3af",  // Fallback für unbekannte Abteilungen/Personen
+  grid:        "#f3f4f6",  // Gridlinien Standard-Charts
+  gridFine:    "#f1f5f9",  // Gridlinien Wirkungs-/FL-Charts
+  ok:          "#059669",  // Status-Ampel grün
+  warn:        "#d97706",  // Status-Ampel gelb
+  bad:         "#dc2626",  // Status-Ampel rot
+  fl: { FL1: "#59B2A5", FL2: "#2176ae", FL3: "#7c6bab" }  // FL-Identität (nie als Status verwenden)
+};
+
+// Schwellenwerte
+const CONFIDENCE_AMBIGUOUS = 0.7;                 // Personen-Zuordnung darunter = unsicher (gelber Punkt)
+const QUALITY_THRESHOLDS   = { green: 80, yellow: 50 };  // Datenqualitäts-Ampel in % (≥80 grün · 50–79 gelb · <50 rot)
+
+// ── Plotly-Basis-Layout (Standard-Charts, DM Sans, weißer Hintergrund) ────────
+const FONT_MAIN = "DM Sans, system-ui, sans-serif";
+function chartTitle(text, size) {
+  return { text: text, font: { size: size || 16, family: FONT_MAIN } };
+}
+function baseLayout(overrides) {
+  return Object.assign({
+    font: { family: FONT_MAIN },
+    plot_bgcolor: "white", paper_bgcolor: "white"
+  }, overrides);
+}
+
+// ── Abteilungs-Badge (einheitliches HTML statt 6 Varianten) ───────────────────
+// variant: "default" (Tabelle/Konfiguration) · "sm" (Briefings) · "xs" (Impulse/Gruppen)
+const ABT_BADGE_SIZES = { default: "", sm: "font-size:.68rem;padding:1px 5px;", xs: "font-size:.7rem;padding:1px 6px;" };
+function abtBadge(name, color, variant, extraStyle) {
+  const size   = ABT_BADGE_SIZES[variant || "default"] || "";
+  const border = (variant && variant !== "default") ? "44" : "55";  // kleine Badges: etwas dezenterer Rand
+  return '<span class="abt-badge" style="' + size + 'background:' + color + '22;color:' + color
+    + ';border:1px solid ' + color + border + (extraStyle ? ';' + extraStyle : '') + '">'
+    + escapeHtml(name) + '</span>';
+}
 
 // Feste Sonder-Kategorien – immer im Personen-Tab sichtbar, nicht aus Daten abgeleitet
 const SPECIAL_DEPTS = [
@@ -1662,7 +1702,7 @@ function _plotNetzwerk(firstRender) {
       textfont:{size:11, color:"white", family:"DM Mono, monospace"},
       marker:{
         size: 50 + pMtgs.length * 1.5,
-        color: effectiveAbtFarben[abt] || "#9ca3af",
+        color: effectiveAbtFarben[abt] || COLORS.neutral,
         symbol: isFk ? "star" : "circle",
         line:{width: isFk ? 2 : 1, color:"white"},
         opacity: 1.0
@@ -1684,7 +1724,7 @@ function _plotNetzwerk(firstRender) {
       shownAbts.add(abt);
       legendTraces.push({
         x:[null], y:[null], mode:"markers",
-        marker:{size:12, color:effectiveAbtFarben[abt]||"#9ca3af"},
+        marker:{size:12, color:effectiveAbtFarben[abt]||COLORS.neutral},
         name:abt, showlegend:true, type:"scatter"
       });
     }
@@ -1711,17 +1751,15 @@ function _plotNetzwerk(firstRender) {
   }
 
   const allTraces = [...edgeTraces, ...nodeTraces, ...legendTraces];
-  const layout = {
-    title:{text:"Kommunikationsnetzwerk – Wer trifft wen?", font:{size:16,family:"DM Sans, system-ui, sans-serif"}},
-    font:{family:"DM Sans, system-ui, sans-serif"},
+  const layout = baseLayout({
+    title: chartTitle("Kommunikationsnetzwerk – Wer trifft wen?"),
     showlegend:true,
     legend:{title:{text:"Abteilung"}, itemsizing:"constant", x:1.01, y:1},
     hovermode:"closest",
     xaxis:{showgrid:false,zeroline:false,showticklabels:false},
     yaxis:{showgrid:false,zeroline:false,showticklabels:false},
-    plot_bgcolor:"white", paper_bgcolor:"white",
     height:640, margin:{l:10,r:140,t:50,b:10}
-  };
+  });
 
   const chartEl = document.getElementById("chart-netzwerk");
   if (firstRender) {
@@ -1811,7 +1849,7 @@ function renderKalender() {
       textfont: { size: 11, color: "white" },
       marker: {
         size: g.szs,
-        color: effectiveAbtFarben[abt] || "#9ca3af",
+        color: effectiveAbtFarben[abt] || COLORS.neutral,
         sizemode: "diameter",
         line: { width: 1, color: "rgba(255,255,255,0.6)" }
       },
@@ -1819,22 +1857,20 @@ function renderKalender() {
     };
   });
 
-  Plotly.newPlot("chart-kalender", traces, {
-    title: { text: "Meeting-Kalender – Wann findet was statt?", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
-    font: { family: "DM Sans, system-ui, sans-serif" },
+  Plotly.newPlot("chart-kalender", traces, baseLayout({
+    title: chartTitle("Meeting-Kalender – Wann findet was statt?"),
     xaxis: {
       title: "Wochentag",
       tickmode: "array",
       tickvals: [0, 1, 2, 3, 4, 5],
       ticktext: ["Mo", "Di", "Mi", "Do", "Fr", "—"],
       range: [-0.65, 5.65],
-      showgrid: true, gridcolor: "#f3f4f6", zeroline: false
+      showgrid: true, gridcolor: COLORS.grid, zeroline: false
     },
-    yaxis: { title: "Rhythmus", categoryorder: "array", categoryarray: rhyO, showgrid: true, gridcolor: "#f3f4f6" },
+    yaxis: { title: "Rhythmus", categoryorder: "array", categoryarray: rhyO, showgrid: true, gridcolor: COLORS.grid },
     legend: { title: { text: "Abteilung" }, orientation: "v", x: 1.02, xanchor: "left" },
-    plot_bgcolor: "white", paper_bgcolor: "white",
     height: 460, margin: { l: 150, r: 20, t: 60, b: 40 }
-  }, { displayModeBar: false });
+  }), { displayModeBar: false });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1946,12 +1982,11 @@ function _renderOverlapHeatmap() {
     hovertext:c.hover, hoverinfo:"text",
     colorbar:{title:{text:"Jaccard"}}
   };
-  Plotly.newPlot("chart-overlap", [trace], {
-    font:{family:"DM Sans, system-ui, sans-serif"},
+  Plotly.newPlot("chart-overlap", [trace], baseLayout({
     height:Math.max(520, n * 22), margin:{l:210,r:80,t:20,b:180},
     xaxis:{tickangle:-45,tickfont:{size:9}},
     yaxis:{tickfont:{size:9}}
-  }, {displayModeBar:false});
+  }), {displayModeBar:false});
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1997,18 +2032,15 @@ function renderAbtChart() {
     };
   });
 
-  const layout = {
+  const layout = baseLayout({
     barmode: "stack",
-    title: { text: isFreq ? "Monatliche Meeting-Frequenz pro Abteilung" : "Meeting-Dichte pro Abteilung",
-             font: { size:16, family:"DM Sans, system-ui, sans-serif" } },
-    font: { family:"DM Sans, system-ui, sans-serif" },
+    title: chartTitle(isFreq ? "Monatliche Meeting-Frequenz pro Abteilung" : "Meeting-Dichte pro Abteilung"),
     yaxis: { automargin:true, tickfont:{ size:12 }, ticks: 'outside', ticklen: 5 },
-    xaxis: { title: isFreq ? "Meetings/Monat" : "Anzahl Meeting-Formate", showgrid:true, gridcolor:"#f3f4f6" },
+    xaxis: { title: isFreq ? "Meetings/Monat" : "Anzahl Meeting-Formate", showgrid:true, gridcolor:COLORS.grid },
     legend: { title:{ text:"Frequenz-Gruppe" }, orientation:"v", x:1.02, xanchor:"left", y:1, yanchor:"top" },
-    plot_bgcolor:"white", paper_bgcolor:"white",
     height: Math.max(320, yAbts.length * 36 + 120),
     margin: { l:150, r:160, t:50, b:50 }
-  };
+  });
   Plotly.react("chart-abt", traces, layout, { displayModeBar:false });
 
   const hint = document.getElementById("hint-abt");
@@ -2055,20 +2087,17 @@ function renderAbtRolleChart(aktive, yAbts) {
     tickvals.push(-v); ticktext.push(String(v));
   }
 
-  const layout = {
+  const layout = baseLayout({
     barmode: "relative",
-    title: { text: "Rolle pro Abteilung: Gastgeber ↔ Teilnehmer",
-             font: { size:16, family:"DM Sans, system-ui, sans-serif" } },
-    font: { family:"DM Sans, system-ui, sans-serif" },
+    title: chartTitle("Rolle pro Abteilung: Gastgeber ↔ Teilnehmer"),
     yaxis: { automargin:true, tickfont:{ size:12 }, ticks: 'outside', ticklen: 5 },
     xaxis: { title: "← Gast in fremden Meetings   ·   eigene Formate →",
              tickvals, ticktext, zeroline:true, zerolinecolor:"#cbd5e1",
-             showgrid:true, gridcolor:"#f3f4f6" },
+             showgrid:true, gridcolor:COLORS.grid },
     legend: { orientation:"h", x:0, xanchor:"left", y:1.08, yanchor:"bottom" },
-    plot_bgcolor:"white", paper_bgcolor:"white",
     height: Math.max(320, yAbts.length * 36 + 120),
     margin: { l:150, r:40, t:70, b:60 }
-  };
+  });
   Plotly.react("chart-abt", [guestTrace, hostTrace], layout, { displayModeBar:false });
 
   const hint = document.getElementById("hint-abt");
@@ -2111,21 +2140,19 @@ function renderStatusVerteilung() {
     type: "bar", name: st,
     x: abts,
     y: abts.map(a => abtStatusMap[a]?.[st] || 0),
-    marker: { color: statusColor[st] || "#9ca3af" },
+    marker: { color: statusColor[st] || COLORS.neutral },
     hovertemplate: "<b>%{x}</b><br>" + st + ": %{y} Meetings<extra></extra>"
   }));
 
-  Plotly.newPlot("chart-status", traces, {
+  Plotly.newPlot("chart-status", traces, baseLayout({
     barmode: "stack",
     barnorm: "percent",
-    title: { text: "Status-Verteilung pro Abteilung", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
-    font: { family: "DM Sans, system-ui, sans-serif" },
+    title: chartTitle("Status-Verteilung pro Abteilung"),
     xaxis: { title: "Abteilung" },
-    yaxis: { title: "Anteil (%)", showgrid: true, gridcolor: "#f3f4f6", range: [0, 100], ticks: 'outside', ticklen: 5 },
+    yaxis: { title: "Anteil (%)", showgrid: true, gridcolor: COLORS.grid, range: [0, 100], ticks: 'outside', ticklen: 5 },
     legend: { title: { text: "Status" } },
-    plot_bgcolor: "white", paper_bgcolor: "white",
     height: 380, margin: { l: 60, r: 20, t: 60, b: 60 }
-  }, { displayModeBar: false });
+  }), { displayModeBar: false });
 }
 
 function renderRhythmusChart() {
@@ -2153,16 +2180,14 @@ function renderRhythmusChart() {
     hovertemplate: "<b>%{x}</b><br>" + kat + ": %{y} Meetings<extra></extra>"
   }));
 
-  Plotly.newPlot("chart-rhythmus", traces, {
+  Plotly.newPlot("chart-rhythmus", traces, baseLayout({
     barmode: "stack",
-    title: { text: "Meetings nach Rhythmus und Kategorie", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
-    font: { family: "DM Sans, system-ui, sans-serif" },
+    title: chartTitle("Meetings nach Rhythmus und Kategorie"),
     xaxis: { title: "Rhythmus (von hochfrequent → selten)" },
-    yaxis: { title: "Anzahl Meeting-Formate", showgrid: true, gridcolor: "#f3f4f6", ticks: 'outside', ticklen: 5 },
+    yaxis: { title: "Anzahl Meeting-Formate", showgrid: true, gridcolor: COLORS.grid, ticks: 'outside', ticklen: 5 },
     legend: { title: { text: "Kategorie" } },
-    plot_bgcolor: "white", paper_bgcolor: "white",
     height: 380, margin: { l: 60, r: 20, t: 60, b: 80 }
-  }, { displayModeBar: false });
+  }), { displayModeBar: false });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2295,7 +2320,7 @@ function renderSankey() {
       srcs.push(sortedIdx[a]); tgts.push(sortedIdx[b]);
       vals.push(round1(v));
       lbls.push(`${a} ↔ ${b}: ${v.toFixed(1)} Freq.-Punkte`);
-      const hex = (effectiveAbtFarben[a]||"#9ca3af").replace("#","");
+      const hex = (effectiveAbtFarben[a]||COLORS.neutral).replace("#","");
       const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),bv=parseInt(hex.slice(4,6),16);
       linkColors.push(`rgba(${r},${g},${bv},0.25)`);
     });
@@ -2303,18 +2328,16 @@ function renderSankey() {
       type:"sankey",
       node:{ pad:24, thickness:24, line:{color:"white",width:0.5},
              label:sortedAbtList,
-             color:sortedAbtList.map(a=>effectiveAbtFarben[a]||"#9ca3af"),
+             color:sortedAbtList.map(a=>effectiveAbtFarben[a]||COLORS.neutral),
              hovertemplate:"<b>%{label}</b><extra></extra>" },
       link:{ source:srcs, target:tgts, value:vals,
              customdata:lbls, hovertemplate:"<b>%{customdata}</b><extra></extra>",
              color:linkColors }
     };
-    Plotly.newPlot("chart-sankey", [trace], {
-      title:{text:"Kommunikationsintensität – sortiert nach Vernetzungsgrad (oben = am stärksten vernetzt)",
-             font:{size:13,family:"DM Sans, system-ui, sans-serif"}},
-      font:{family:"DM Sans, system-ui, sans-serif"},
+    Plotly.newPlot("chart-sankey", [trace], baseLayout({
+      title: chartTitle("Kommunikationsintensität – sortiert nach Vernetzungsgrad (oben = am stärksten vernetzt)", 13),
       height:440, margin:{l:20,r:20,t:60,b:30}
-    }, {displayModeBar:false});
+    }), {displayModeBar:false});
 
     const sankeyEl = document.getElementById("chart-sankey");
     const baseColors = [...linkColors];
@@ -2377,7 +2400,7 @@ function renderChord(flussSymm, abtList, abtIdx) {
     .style("position","absolute").style("pointer-events","none")
     .style("background","white").style("border","1px solid #e5e7eb")
     .style("border-radius","8px").style("padding","8px 12px")
-    .style("font-size","12px").style("font-family","DM Sans, system-ui, sans-serif")
+    .style("font-size","12px").style("font-family",FONT_MAIN)
     .style("box-shadow","0 2px 10px rgba(0,0,0,.12)").style("opacity",0)
     .style("transition","opacity .12s").style("max-width","220px")
     .style("z-index","100");
@@ -2391,7 +2414,7 @@ function renderChord(flussSymm, abtList, abtIdx) {
 
   const svg = d3.select(el).append("svg")
     .attr("width", W).attr("height", H)
-    .style("font-family","DM Sans, system-ui, sans-serif");
+    .style("font-family",FONT_MAIN);
 
   // Pfad-Definitionen für Bogen-Labels (textPath)
   const midR = (innerR + outerR) / 2;
@@ -2499,7 +2522,7 @@ function renderTable() {
   const tbody = document.getElementById("table-body");
   tbody.innerHTML = "";
   MEETINGS.forEach((m, idx) => {
-    const abtCol = effectiveAbtFarben[m.abteilung] || "#9ca3af";
+    const abtCol = effectiveAbtFarben[m.abteilung] || COLORS.neutral;
     const teilnStr = m.teilnehmer.join(", ") || "–";
     const vera = m.verantwortlich || "–";
     const statusCls = m.status === "Aktiv" ? "badge-aktiv" : "badge-geplant";
@@ -2519,10 +2542,10 @@ function renderTable() {
     tr.setAttribute("data-vera", vera);
     tr.setAttribute("data-teiln", teilnStr);
     tr.innerHTML = `
-      <td><span class="abt-badge" style="background:${abtCol}22;color:${abtCol};border:1px solid ${abtCol}55">${escapeHtml(m.abteilung)}</span></td>
+      <td>${abtBadge(m.abteilung, abtCol)}</td>
       <td class="meeting-name">${escapeHtml(m.name)}${platzh}${grupBadge}</td>
       <td><span class="kat-pill">${escapeHtml(m.kategorie)}</span></td>
-      <td><span class="rhy-dot" style="background:${RHY_FARBEN[m.rhythmus_klasse]||'#9ca3af'}"></span>${m.rhythmus_klasse}</td>
+      <td><span class="rhy-dot" style="background:${RHY_FARBEN[m.rhythmus_klasse]||COLORS.neutral}"></span>${m.rhythmus_klasse}</td>
       <td style="text-align:right;color:${m.dauer?'inherit':'#c0ccc9'}">${m.dauer ? m.dauer+'′' : '–'}</td>
       <td style="text-align:center;letter-spacing:1px;color:${m.wert?'#59B2A5':'#c0ccc9'}">${wertDisplay}</td>
       <td>${escapeHtml(vera)}</td>
@@ -2636,7 +2659,7 @@ function renderPersonenTab() {
   });
 
   // Unsichere Zuordnungen (gelber Punkt = Konfidenz < 0.7) ermitteln
-  const _isUnsicher = p => !!(personConfidence[p] && personConfidence[p].score < 0.7);
+  const _isUnsicher = p => !!(personConfidence[p] && personConfidence[p].score < CONFIDENCE_AMBIGUOUS);
   const _unsicherList = allPersons.filter(_isUnsicher);
   if (personenNurUnsicher && _unsicherList.length === 0) personenNurUnsicher = false; // nichts zu filtern
 
@@ -2793,7 +2816,7 @@ function buildPersonChip(person, currentDept) {
 function isAmbiguous(person) {
   const c = personConfidence[person];
   if (!c) return false;
-  return c.score < 0.70 && c.alternatives.length > 1;
+  return c.score < CONFIDENCE_AMBIGUOUS && c.alternatives.length > 1;
 }
 
 // ── Popover ──────────────────────────────────────────────────────────────────
@@ -2814,7 +2837,7 @@ function openPersonPopover(person, anchorEl, event) {
     item.className = "person-popover-item" + (dept === currentDept ? " selected" : "");
     const dot = document.createElement("span");
     dot.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;
-      background:${effectiveAbtFarben[dept]||"#9ca3af"};flex-shrink:0`;
+      background:${effectiveAbtFarben[dept]||COLORS.neutral};flex-shrink:0`;
     item.appendChild(dot);
     item.appendChild(document.createTextNode(dept));
     item.onclick = () => { assignPerson(person, dept); closePopover(); };
@@ -3007,7 +3030,7 @@ function renderEngpass() {
       name: "als Verantwortliche/r (Kopf)",
       y: display,
       x: display.map(p => kopfCount[p] || 0),
-      marker: { color: "#2176ae" },
+      marker: { color: COLORS.lead },
       hovertemplate: "<b>%{y}</b><br>%{x} Meetings als Verantwortliche/r<extra></extra>"
     },
     {
@@ -3015,20 +3038,18 @@ function renderEngpass() {
       name: "als Teilnehmer/in",
       y: display,
       x: display.map(p => teilnCount[p] || 0),
-      marker: { color: "#59B2A5" },
+      marker: { color: COLORS.participant },
       hovertemplate: "<b>%{y}</b><br>%{x} Meetings als Teilnehmer/in<extra></extra>"
     }
-  ], {
+  ], baseLayout({
     barmode: "stack",
-    title: { text: "Meeting-Last pro Person" + (engpassExpanded ? "" : " (Top " + ENGPASS_TOP + ")"), font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
-    font: { family: "DM Sans, system-ui, sans-serif" },
-    xaxis: { title: "Anzahl Meetings", showgrid: true, gridcolor: "#f3f4f6", dtick: 1 },
+    title: chartTitle("Meeting-Last pro Person" + (engpassExpanded ? "" : " (Top " + ENGPASS_TOP + ")")),
+    xaxis: { title: "Anzahl Meetings", showgrid: true, gridcolor: COLORS.grid, dtick: 1 },
     yaxis: { autorange: "reversed", automargin: true, ticks: 'outside', ticklen: 5 },
     legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "right", x: 1 },
-    plot_bgcolor: "white", paper_bgcolor: "white",
     height: HEIGHT,
     margin: { l: 20, r: 20, t: 60, b: 60 }
-  }, { displayModeBar: false });
+  }), { displayModeBar: false });
   renderZeitlast();
 }
 
@@ -3095,7 +3116,7 @@ function renderZeitlast() {
       name: "als Verantwortliche/r (Kopf)",
       y: displayZ,
       x: displayZ.map(p => toH(kopfMin[p] || 0)),
-      marker: { color: "#2176ae" },
+      marker: { color: COLORS.lead },
       hovertemplate: "<b>%{y}</b><br>%{x} h/Monat als Verantwortliche/r<extra></extra>"
     },
     {
@@ -3103,20 +3124,18 @@ function renderZeitlast() {
       name: "als Teilnehmer/in",
       y: displayZ,
       x: displayZ.map(p => toH(teilnMin[p] || 0)),
-      marker: { color: "#59B2A5" },
+      marker: { color: COLORS.participant },
       hovertemplate: "<b>%{y}</b><br>%{x} h/Monat als Teilnehmer/in<extra></extra>"
     }
-  ], {
+  ], baseLayout({
     barmode: "stack",
-    title: { text: "Zeitlast pro Person (Stunden/Monat, geschätzt)", font: { size: 16, family: "DM Sans, system-ui, sans-serif" } },
-    font: { family: "DM Sans, system-ui, sans-serif" },
-    xaxis: { title: "Stunden pro Monat", showgrid: true, gridcolor: "#f3f4f6" },
+    title: chartTitle("Zeitlast pro Person (Stunden/Monat, geschätzt)"),
+    xaxis: { title: "Stunden pro Monat", showgrid: true, gridcolor: COLORS.grid },
     yaxis: { autorange: "reversed", automargin: true, ticks: 'outside', ticklen: 5 },
     legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "right", x: 1 },
-    plot_bgcolor: "white", paper_bgcolor: "white",
     height: HEIGHT,
     margin: { l: 20, r: 20, t: 60, b: 60 }
-  }, { displayModeBar: false });
+  }), { displayModeBar: false });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -3164,14 +3183,14 @@ function _renderTreemapBriefing(withHours) {
   var rows = top.map(function(x, i) {
     var m = x.m;
     var fkCount = m.teilnehmer.filter(function(t){ return fkSet.has(t); }).length;
-    var farbe = effectiveAbtFarben[m.abteilung] || '#9ca3af';
+    var farbe = effectiveAbtFarben[m.abteilung] || COLORS.neutral;
     var pct = totalH > 0 ? Math.round(x.mH / totalH * 100) : 0;
     var name = m.name.length > 32 ? m.name.slice(0, 31) + '…' : m.name;
     return '<div class="tbr-row">'
       + '<span class="tbr-rank">' + (i+1) + '.</span>'
       + '<div class="tbr-body">'
       + '<span class="tbr-name" title="' + escapeHtml(m.name) + '">' + escapeHtml(name) + '</span>'
-      + '<span class="abt-badge" style="font-size:.68rem;padding:1px 5px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + escapeHtml(m.abteilung) + '</span>'
+      + abtBadge(m.abteilung, farbe, "sm")
       + '<span class="tbr-cost">' + x.mH.toFixed(1) + ' h/Mo</span>'
       + '<span class="tbr-pers">' + m.teilnehmer.length + ' Pers. · ' + pct + '%</span>'
       + (fkCount > 0 ? '<span class="tbr-fk">★ ' + fkCount + ' FK' + (fkCount > 1 ? 's' : '') + '</span>' : '')
@@ -3292,14 +3311,11 @@ function renderTreemap() {
     marker:       { colors, line: { width: 1, color: "white" }, cornerradius: 6 },
     customdata, hovertemplate: htmpl,
     texttemplate:  "%{text}",
-    insidetextfont: { size: 12, family: "DM Sans, system-ui, sans-serif", color: "auto" }
-  }], {
-    font:         { family: "DM Sans, system-ui, sans-serif" },
-    margin:       { l: 0, r: 0, t: 10, b: 10 },
-    height:       520,
-    plot_bgcolor:  "white",
-    paper_bgcolor: "white"
-  }, { displayModeBar: false });
+    insidetextfont: { size: 12, family: FONT_MAIN, color: "auto" }
+  }], baseLayout({
+    margin: { l: 0, r: 0, t: 10, b: 10 },
+    height: 520
+  }), { displayModeBar: false });
 }
 
 // ── FK-Toggle ─────────────────────────────────────────────────────────────────
@@ -3410,8 +3426,8 @@ function renderWirkungsMatrix() {
 
   Plotly.react(el, traces, {
     margin: { t: 40, r: 180, b: 56, l: 56 },
-    xaxis: { title: "Zeitaufwand h/Monat", zeroline: false, gridcolor: "#f1f5f9", range: [0, xMax] },
-    yaxis: { title: "Wirkung", tickvals: [1,2,3,4], ticktext: ["1","2","3","4"], range: [0.5, 4.5], gridcolor: "#f1f5f9" },
+    xaxis: { title: "Zeitaufwand h/Monat", zeroline: false, gridcolor: COLORS.gridFine, range: [0, xMax] },
+    yaxis: { title: "Wirkung", tickvals: [1,2,3,4], ticktext: ["1","2","3","4"], range: [0.5, 4.5], gridcolor: COLORS.gridFine },
     shapes, annotations,
     legend: { orientation: "v", y: 1, x: 1.02, xanchor: "left", yanchor: "top" },
     plot_bgcolor: "#fff", paper_bgcolor: "#fff",
@@ -3461,12 +3477,12 @@ function _renderWirkungsBriefing(data, xVals, xMedian) {
     var m = item.m;
     var fkCount = m.teilnehmer.filter(function(t){ return fkSet.has(t); }).length;
     var name = m.name.length > 36 ? m.name.slice(0,35)+'…' : m.name;
-    var farbe = effectiveAbtFarben[m.abteilung] || '#9ca3af';
+    var farbe = effectiveAbtFarben[m.abteilung] || COLORS.neutral;
     return '<div class="tbr-row">'
       + '<span class="tbr-rank">' + (i+1) + '.</span>'
       + '<div class="tbr-body">'
       + '<span class="tbr-name" title="' + escapeHtml(m.name) + '">' + escapeHtml(name) + '</span>'
-      + '<span class="abt-badge" style="font-size:.68rem;padding:1px 5px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + escapeHtml(m.abteilung) + '</span>'
+      + abtBadge(m.abteilung, farbe, "sm")
       + '<span class="tbr-cost" style="color:#dc2626">' + item.x.toFixed(1) + ' h/Mo</span>'
       + '<span class="tbr-pers">' + '●'.repeat(Math.round(m.wirkungEffektiv)) + '○'.repeat(4-Math.round(m.wirkungEffektiv)) + '</span>'
       + (fkCount > 0 ? '<span class="tbr-fk">★ ' + fkCount + ' FK' + (fkCount>1?'s':'') + '</span>' : '')
@@ -3864,7 +3880,7 @@ function renderMeinInputSection() {
 
   html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%">';
   html += problemEntries.map(function(entry) {
-    var farbe = effectiveAbtFarben[entry.m.abteilung] || '#9ca3af';
+    var farbe = effectiveAbtFarben[entry.m.abteilung] || COLORS.neutral;
     var hasError = entry.issues.some(function(s) { return s.indexOf('#fee2e2') !== -1; });
     var borderColor = hasError ? '#fca5a5' : '#fcd34d';
     var bgColor = '#ffffff';
@@ -3875,7 +3891,7 @@ function renderMeinInputSection() {
     return '<div style="border:1px solid ' + borderColor + ';border-radius:8px;padding:8px 10px;background:' + bgColor + ';min-width:0;overflow:hidden">'
       + '<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap">'
       + rolleBadge
-      + '<span class="abt-badge" style="font-size:.7rem;padding:1px 6px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + escapeHtml(entry.m.abteilung) + '</span>'
+      + abtBadge(entry.m.abteilung, farbe, "xs")
       + '</div>'
       + '<div style="font-size:.82rem;font-weight:600;color:#1a2e2c;margin-bottom:6px;word-break:break-word">' + escapeHtml(entry.m.name) + '</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:4px">' + badgesHTML + '</div>'
@@ -3893,13 +3909,13 @@ function renderDeptTypenGrid() {
     .filter(k => !allDepts.includes(k) && Object.values(effectivePersonAbt).includes(k))];
 
   grid.innerHTML = allActiveDepts.map(dept => {
-    const farbe = effectiveAbtFarben[dept] || "#9ca3af";
+    const farbe = effectiveAbtFarben[dept] || COLORS.neutral;
     const curTyp = deptFunktionen[dept] || "";
     const opts = DEPT_TYP_OPTS.map(o =>
       `<option value="${o.val}"${o.val === curTyp ? " selected" : ""}>${o.label}${o.hint ? " ("+o.hint+")" : ""}</option>`
     ).join("");
     return `<div class="dp-dept-row">
-      <span class="abt-badge" style="background:${farbe}22;color:${farbe};border:1px solid ${farbe}55;min-width:100px;justify-content:center">${escapeHtml(dept)}</span>
+      ${abtBadge(dept, farbe, "default", "min-width:100px;justify-content:center")}
       <select class="dp-typ-sel" data-dept="${escapeHtml(dept)}" onchange="setDeptTyp(this)">${opts}</select>
     </div>`;
   }).join("") || '<p class="hint">Keine Abteilungen geladen.</p>';
@@ -3954,7 +3970,7 @@ function renderQualitaetsCockpit() {
       hint: "Meetings mit Gruppen-Platzhaltern können nicht personengenau analysiert werden.",
       action: "Unten in 'Gruppen-Teilnehmer' auflösen." },
     { label: "Personen klar zugeordnet",
-      count: knownPersons.filter(p => (personConfidence[p]?.score || 1) >= 0.7).length,
+      count: knownPersons.filter(p => (personConfidence[p]?.score || 1) >= CONFIDENCE_AMBIGUOUS).length,
       tot: knownPersons.length || 1,
       hint: "Unsichere Personen (gelber Punkt) können Charts verzerren.",
       action: "Im Tab 'Personen' gelbe Punkte pruefen." },
@@ -3962,15 +3978,15 @@ function renderQualitaetsCockpit() {
 
   // Status-Ampel: eine Quelle für Balkenfarbe, Icon und Wert (≥80 grün · 50–79 gelb · <50 rot)
   function qualStatus(pct) {
-    if (pct >= 80) return { color: "#059669", icon: "✓" };
-    if (pct >= 50) return { color: "#d97706", icon: "⚠" };
-    return { color: "#dc2626", icon: "✕" };
+    if (pct >= QUALITY_THRESHOLDS.green)  return { color: COLORS.ok,   icon: "✓" };
+    if (pct >= QUALITY_THRESHOLDS.yellow) return { color: COLORS.warn, icon: "⚠" };
+    return { color: COLORS.bad, icon: "✕" };
   }
 
   grid.innerHTML = metrics.map(m => {
     const pct = m.tot > 0 ? Math.round(m.count / m.tot * 100) : 100;
     const st = qualStatus(pct);
-    const isGood = pct >= 80;
+    const isGood = pct >= QUALITY_THRESHOLDS.green;
     return `<div class="dp-qual-card">
       <div class="dp-qual-header">
         <span style="color:${st.color};font-weight:700;font-size:.88rem">${st.icon}</span>
@@ -3986,8 +4002,8 @@ function renderQualitaetsCockpit() {
   const strip = document.getElementById("dp-health-strip");
   if (strip) {
     const pcts = metrics.map(m => m.tot > 0 ? Math.round(m.count / m.tot * 100) : 100);
-    const gut = pcts.filter(p => p >= 80).length;
-    const schwach = metrics.filter((m, i) => pcts[i] < 80);
+    const gut = pcts.filter(p => p >= QUALITY_THRESHOLDS.green).length;
+    const schwach = metrics.filter((m, i) => pcts[i] < QUALITY_THRESHOLDS.green);
     if (schwach.length === 0) {
       strip.innerHTML = '<span style="color:#059669;font-weight:600">&#10003; Datenqualität: alle ' + metrics.length + ' Felder vollständig (&ge; 80 %)</span>';
     } else {
@@ -4047,7 +4063,7 @@ function renderGruppenTeilnehmerSection() {
 
   const rowsHTML = entries.map(function(e) {
     const m = e.m;
-    const farbe = effectiveAbtFarben[m.abteilung] || "#9ca3af";
+    const farbe = effectiveAbtFarben[m.abteilung] || COLORS.neutral;
     const isManual = _nonPersons.has(e.g);
     const rollenBadge = e.isVerantwortlich
       ? '<span style="font-size:.68rem;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:1px 6px">Verantwortliche(r)<\/span> '
@@ -4057,7 +4073,7 @@ function renderGruppenTeilnehmerSection() {
       + '<button onclick="' + escapeHtml("toggleNonPerson('" + e.g.replace(/\\/g,"\\\\").replace(/'/g,"\\'") + "')") + '" style="font-size:.68rem;background:none;border:1px solid #d1d5db;border-radius:4px;padding:1px 6px;cursor:pointer;color:#6b7280;margin-left:2px">&#8617; Rückgängig<\/button>'
       : '<span style="font-size:.68rem;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:4px;padding:1px 6px">&#9881; automatisch erkannt<\/span>';
     return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">'
-      + '<span class="abt-badge" style="font-size:.7rem;padding:1px 6px;background:' + farbe + '22;color:' + farbe + ';border:1px solid ' + farbe + '44">' + escapeHtml(m.abteilung) + '<\/span>'
+      + abtBadge(m.abteilung, farbe, "xs")
       + '<span style="font-size:.82rem;font-weight:600;color:#1a2e2c">' + escapeHtml(m.name) + '<\/span>'
       + '<span style="font-size:.78rem;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:4px;padding:1px 7px;font-weight:600">' + escapeHtml(e.g) + '<\/span>'
       + rollenBadge
@@ -4208,7 +4224,7 @@ function _renderFLBriefing(aktive, byFL) {
   var mismatch = aktive.filter(function(m){ return FL_MISMATCH[m.flugebene] && FL_MISMATCH[m.flugebene].includes(m.rhythmus_klasse); }).length;
 
   // Status-Farben (NUR Status, nicht FL-Identität): grün = gut, gelb = Achtung
-  var OK = '#059669', WARN = '#d97706';
+  var OK = COLORS.ok, WARN = COLORS.warn;
 
   // Kachel 1: Koordinations-Lücken
   var k1val, k1col, k1sub;
@@ -4275,7 +4291,7 @@ function _renderFLBriefing(aktive, byFL) {
 }
 
 function renderFlightLevels() {
-  const FL_COLORS = { FL1: "#59B2A5", FL2: "#2176ae", FL3: "#7c6bab" };
+  const FL_COLORS = COLORS.fl;
   const FL_LABELS = { FL1: "FL1 · Operativ", FL2: "FL2 · Koordination", FL3: "FL3 · Strategisch" };
   const FL_KEYS   = ["FL1", "FL2", "FL3"];
   const LAYOUT_BASE = {
@@ -4324,7 +4340,7 @@ function renderFlightLevels() {
     }], {
       ...LAYOUT_BASE,
       height: 200, margin: { l: 160, r: 40, t: 16, b: 40 },
-      xaxis: { title: "Anzahl Meetings", zeroline: false, gridcolor: "#f1f5f9" },
+      xaxis: { title: "Anzahl Meetings", zeroline: false, gridcolor: COLORS.gridFine },
       yaxis: { automargin: true, ticks: 'outside', ticklen: 5 }
     }, { displayModeBar: false });
 
@@ -4458,7 +4474,7 @@ function renderFlightLevels() {
       }), {
         ...LAYOUT_BASE,
         height: 320, margin: { l: 50, r: 30, t: 16, b: 60 },
-        yaxis: { title: "Wirkung (1–4)", range: [0.5, 4.5], dtick: 1, gridcolor: "#f1f5f9" },
+        yaxis: { title: "Wirkung (1–4)", range: [0.5, 4.5], dtick: 1, gridcolor: COLORS.gridFine },
         xaxis: { automargin: true }, showlegend: false
       }, { displayModeBar: false });
 
@@ -4573,8 +4589,8 @@ function renderFlightLevels() {
       Plotly.newPlot("chart-fl-frequenz", traces, {
         ...LAYOUT_BASE,
         height: 260, margin: { l: 110, r: 30, t: 16, b: 80 },
-        xaxis: { categoryorder: "array", categoryarray: RHYTHMUS_ORDER, tickangle: -30, automargin: true, gridcolor: "#f1f5f9" },
-        yaxis: { categoryorder: "array", categoryarray: ["FL1","FL2","FL3"], automargin: true, gridcolor: "#f1f5f9" },
+        xaxis: { categoryorder: "array", categoryarray: RHYTHMUS_ORDER, tickangle: -30, automargin: true, gridcolor: COLORS.gridFine },
+        yaxis: { categoryorder: "array", categoryarray: ["FL1","FL2","FL3"], automargin: true, gridcolor: COLORS.gridFine },
         plot_bgcolor: "#f8fafc"
       }, { displayModeBar: false });
     }
@@ -4833,9 +4849,9 @@ function _renderFLSchluesselFragen(aktive, byFL) {
   var q6Answer = 'Auf Basis der vorliegenden Daten koennen wir nichts sagen ueber: ' + q6Parts.join(', ') + '. Eine Analyse auf Basis unvollstaendiger Daten kann verzerren – fehlende Informationen sollten in der Quelltabelle nachgepflegt werden.';
 
   // Ampel-Status pro Frage: ✓ gut beantwortbar · ⚠ Einschränkung · ✕ Datenlücke/Handlungsbedarf
-  var GOOD = { color: '#059669', icon: '✓', word: 'Befund' };
-  var WARN = { color: '#d97706', icon: '⚠', word: 'Achtung' };
-  var BAD  = { color: '#dc2626', icon: '✕', word: 'Datenlücke' };
+  var GOOD = { color: COLORS.ok,   icon: '✓', word: 'Befund' };
+  var WARN = { color: COLORS.warn, icon: '⚠', word: 'Achtung' };
+  var BAD  = { color: COLORS.bad,  icon: '✕', word: 'Datenlücke' };
 
   var q1St = (fl2 === 0) ? BAD : (fl2 < fl3 ? WARN : GOOD);
   var q2St = (fl2 === 0) ? BAD : ((maxPairs === 0 || missingPairs > 0) ? WARN : GOOD);
@@ -4947,7 +4963,7 @@ function renderOrganigramm() {
       labels.push(abt);
       parents.push("typ__" + typ);
       values.push(0);
-      cols.push(effectiveAbtFarben[abt] || "#9ca3af");
+      cols.push(effectiveAbtFarben[abt] || COLORS.neutral);
       hvr.push(persInAbt + " Personen");
     });
   });
@@ -4961,7 +4977,7 @@ function renderOrganigramm() {
     labels.push(p);
     parents.push("abt__" + abt);
     values.push(Math.max(1, vCnt));
-    cols.push(effectiveAbtFarben[abt] || "#9ca3af");
+    cols.push(effectiveAbtFarben[abt] || COLORS.neutral);
     hvr.push(vCnt + " Meetings verantw.<br>" + reach + " Personen erreicht");
   });
 
