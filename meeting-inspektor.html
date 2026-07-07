@@ -674,7 +674,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "07.07.2026 13:49";
+const APP_VERSION = "07.07.2026 17:51";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -817,11 +817,11 @@ const RHYTHMUS_MAP = [
   [/divers|variabel|nach bedarf/i,                "variabel"],
 ];
 const TAG_MAP = [
-  [/(?<![a-zA-Z])montag(?![a-zA-Z])|(?<![a-zA-Z])mo\.?(?![a-zA-Z])/i, "Mo"],
-  [/(?<![a-zA-Z])dienstag(?![a-zA-Z])|(?<![a-zA-Z])di\.?(?![a-zA-Z])/i, "Di"],
-  [/(?<![a-zA-Z])mittwoch(?![a-zA-Z])|(?<![a-zA-Z])mi\.?(?![a-zA-Z])/i, "Mi"],
-  [/(?<![a-zA-Z])donnerstag(?![a-zA-Z])|(?<![a-zA-Z])do\.?(?![a-zA-Z])/i, "Do"],
-  [/(?<![a-zA-Z])freitag(?![a-zA-Z])|(?<![a-zA-Z])fr\.?(?![a-zA-Z])/i, "Fr"],
+  [/(?<![a-zA-Z])montags?(?![a-zA-Z])|(?<![a-zA-Z])mo\.?(?![a-zA-Z])/i, "Mo"],
+  [/(?<![a-zA-Z])dienstags?(?![a-zA-Z])|(?<![a-zA-Z])di\.?(?![a-zA-Z])/i, "Di"],
+  [/(?<![a-zA-Z])mittwochs?(?![a-zA-Z])|(?<![a-zA-Z])mi\.?(?![a-zA-Z])/i, "Mi"],
+  [/(?<![a-zA-Z])donnerstags?(?![a-zA-Z])|(?<![a-zA-Z])do\.?(?![a-zA-Z])/i, "Do"],
+  [/(?<![a-zA-Z])freitags?(?![a-zA-Z])|(?<![a-zA-Z])fr\.?(?![a-zA-Z])/i, "Fr"],
 ];
 
 function normalizeRhythmus(text) {
@@ -3293,17 +3293,21 @@ function renderWirkungsMatrix() {
     });
   });
 
-  // Kategorien + Farben
-  const katList = [...new Set(data.map(function(m){ return m.kategorie || "Sonstige"; }))].sort();
-  const katColor = {};
-  katList.forEach(function(k, i){ katColor[k] = PALETTE[i % PALETTE.length]; });
+  // Abteilungen des Verantwortlichen + Farben
+  const abtList = [...new Set(data.map(function(m){
+    return effectivePersonAbt[m.verantwortlich] || m.abteilung || "Unbekannt";
+  }))].sort();
+  const abtColor = {};
+  abtList.forEach(function(a, i){ abtColor[a] = PALETTE[i % PALETTE.length]; });
 
   const dataWithIdx = data.map(function(m, i){ return { m: m, i: i, x: xVals[i] }; });
 
-  const traces = katList.map(function(kat) {
-    const items = dataWithIdx.filter(function(d){ return (d.m.kategorie || "Sonstige") === kat; });
+  const traces = abtList.map(function(abt) {
+    const items = dataWithIdx.filter(function(d){
+      return (effectivePersonAbt[d.m.verantwortlich] || d.m.abteilung || "Unbekannt") === abt;
+    });
     return {
-      type: "scatter", mode: "markers", name: kat,
+      type: "scatter", mode: "markers", name: abt,
       x: items.map(function(d){ return d.x; }),
       y: items.map(function(d){ return d.m.wert + yJitter[d.i]; }),
       text: items.map(function(d) {
@@ -3318,7 +3322,7 @@ function renderWirkungsMatrix() {
       }),
       hovertemplate: "%{text}<extra></extra>",
       marker: {
-        color: katColor[kat],
+        color: abtColor[abt],
         size: items.map(function(d){ return Math.max(d.m.teilnehmer.length || 1, 1) * 6 + 8; }),
         opacity: 0.82
       }
@@ -3771,7 +3775,7 @@ function renderMeinInputSection() {
     if (userPositions.length > 0) {
       var wirkParts = m._wirkungRaw ? m._wirkungRaw.split('/') : [];
       var hasUnfilledSlot = userPositions.some(function(pos) {
-        var slot = wirkParts[pos + 1];
+        var slot = wirkParts[pos];
         return !slot || !slot.trim() || isNaN(parseInt(slot.trim(), 10));
       });
       if (hasUnfilledSlot) {
@@ -3874,6 +3878,10 @@ function renderQualitaetsCockpit() {
       count: MEETINGS.filter(m => m.wert !== null).length, tot: total,
       hint: "Nötig für Wirkungsmatrix (Tab 8) und FL-Wirkungsdiagramm.",
       action: "Als Spalte in der Urliste eintragen (Wirkung 1-4)." },
+    { label: "Teilnehmer-Wirkung erfasst",
+      count: MEETINGS.filter(m => m.wertTeilnehmerAvg !== null).length, tot: total,
+      hint: "Zeigt, ob Wirkungsbewertungen nicht nur vom Verantwortlichen, sondern auch von Teilnehmern stammen.",
+      action: "Teilnehmer bitten, die Wirkungsspalte auszufuellen (Format: Verantw/Teiln1/Teiln2...)." },
     { label: "Infofluss dokumentiert",
       count: MEETINGS.filter(m => m.infofluss && m.infofluss.trim()).length, tot: total,
       hint: "Dokumentiert wohin Informationen fließen.",
