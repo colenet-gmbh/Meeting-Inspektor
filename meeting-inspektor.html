@@ -674,7 +674,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "07.07.2026 21:27";
+const APP_VERSION = "08.07.2026 09:09";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -4290,15 +4290,20 @@ function _renderFLBriefing(aktive, byFL) {
     + '</div></div>';
 }
 
-function renderFlightLevels() {
-  const FL_COLORS = COLORS.fl;
-  const FL_LABELS = { FL1: "FL1 · Operativ", FL2: "FL2 · Koordination", FL3: "FL3 · Strategisch" };
-  const FL_KEYS   = ["FL1", "FL2", "FL3"];
-  const LAYOUT_BASE = {
-    plot_bgcolor: "#fff", paper_bgcolor: "#fff",
-    font: { family: "Inter, system-ui, sans-serif", size: 12, color: "#374151" }
-  };
+// Gemeinsame Flight-Level-Konstanten (Identitätsfarben – nie als Status verwenden)
+const FL_COLORS = COLORS.fl;
+const FL_LABELS = { FL1: "FL1 · Operativ", FL2: "FL2 · Koordination", FL3: "FL3 · Strategisch" };
+const FL_KEYS   = ["FL1", "FL2", "FL3"];
+const LAYOUT_BASE = {
+  plot_bgcolor: "#fff", paper_bgcolor: "#fff",
+  font: { family: "Inter, system-ui, sans-serif", size: 12, color: "#374151" }
+};
+// Summe geschätzter Stunden/Monat über eine Meeting-Liste
+function hPerMonth(ms) {
+  return ms.reduce((s, m) => s + monthlyHours(m), 0);
+}
 
+function renderFlightLevels() {
   const aktive = MEETINGS.filter(m => !m.ist_platzhalter);
   const byFL = { FL1: [], FL2: [], FL3: [] };
   aktive.forEach(m => { if (byFL[m.flugebene]) byFL[m.flugebene].push(m); });
@@ -4306,12 +4311,17 @@ function renderFlightLevels() {
   _renderFLBriefing(aktive, byFL);
   _renderFLEinfuehrung();
   _renderFLDatenperspektive(aktive, byFL);
+  _renderFLKpis(aktive, byFL);
+  _renderFLPyramide(aktive, byFL);
+  _renderFLMatrix(aktive, byFL);
+  _renderFLWirkung(aktive, byFL);
+  _renderFLBrueckenkoepfe(aktive, byFL);
+  _renderFLRhythmusMatrix(aktive, byFL);
+  _renderFLSchluesselFragen(aktive, byFL);
+}
 
-  function hPerMonth(ms) {
-    return ms.reduce((s, m) => s + monthlyHours(m), 0);
-  }
-
-  // ── KPI-Karten ─────────────────────────────────────────────────────────────
+// ── KPI-Karten ────────────────────────────────────────────────────────────
+function _renderFLKpis(aktive, byFL) {
   const kpiEl = document.getElementById("fl-kpi-cards");
   if (kpiEl) {
     kpiEl.innerHTML = FL_KEYS.map(fl => {
@@ -4323,303 +4333,302 @@ function renderFlightLevels() {
       </div>`;
     }).join("");
   }
+}
 
-  // ── F1: Kommunikationspyramide ─────────────────────────────────────────────
-  (function() {
-    const counts = FL_KEYS.map(fl => byFL[fl].length);
-    const hours  = FL_KEYS.map(fl => +hPerMonth(byFL[fl]).toFixed(1));
-    Plotly.newPlot("chart-fl-pyramide", [{
-      type: "bar", orientation: "h",
-      y: ["FL1 · Operativ", "FL2 · Koordination", "FL3 · Strategisch"],
-      x: [counts[0], counts[1], counts[2]],
-      marker: { color: [FL_COLORS.FL1, FL_COLORS.FL2, FL_COLORS.FL3] },
-      text: [`${counts[0]} Meetings · ${hours[0]} h/Mo`, `${counts[1]} Meetings · ${hours[1]} h/Mo`, `${counts[2]} Meetings · ${hours[2]} h/Mo`],
-      textposition: "inside", insidetextanchor: "middle",
-      textfont: { color: "white", size: 12 },
-      hovertemplate: "%{y}: %{x} Meetings · klicken für Details<extra></extra>"
+// ── F1: Kommunikationspyramide ─────────────────────────────────────────────
+function _renderFLPyramide(aktive, byFL) {
+  const counts = FL_KEYS.map(fl => byFL[fl].length);
+  const hours  = FL_KEYS.map(fl => +hPerMonth(byFL[fl]).toFixed(1));
+  Plotly.newPlot("chart-fl-pyramide", [{
+    type: "bar", orientation: "h",
+    y: ["FL1 · Operativ", "FL2 · Koordination", "FL3 · Strategisch"],
+    x: [counts[0], counts[1], counts[2]],
+    marker: { color: [FL_COLORS.FL1, FL_COLORS.FL2, FL_COLORS.FL3] },
+    text: [`${counts[0]} Meetings · ${hours[0]} h/Mo`, `${counts[1]} Meetings · ${hours[1]} h/Mo`, `${counts[2]} Meetings · ${hours[2]} h/Mo`],
+    textposition: "inside", insidetextanchor: "middle",
+    textfont: { color: "white", size: 12 },
+    hovertemplate: "%{y}: %{x} Meetings · klicken für Details<extra></extra>"
+  }], {
+    ...LAYOUT_BASE,
+    height: 200, margin: { l: 160, r: 40, t: 16, b: 40 },
+    xaxis: { title: "Anzahl Meetings", zeroline: false, gridcolor: COLORS.gridFine },
+    yaxis: { automargin: true, ticks: 'outside', ticklen: 5 }
+  }, { displayModeBar: false });
+
+  // Klick auf einen Balken → scrollbare Liste der Meetings dieser Ebene (skaliert für 2 wie 47)
+  var _pyEl = document.getElementById("chart-fl-pyramide");
+  var _listEl = document.getElementById("fl-pyramide-liste");
+  if (_listEl) { _listEl.innerHTML = ""; _listEl.dataset.open = ""; }
+  function _showFLList(fl) {
+    var ms = (byFL[fl] || []).slice().sort(function(x,y){ return String(x.name).localeCompare(String(y.name)); });
+    var items = ms.length
+      ? ms.map(function(m){ return '<div class="fl-mtg-item"><span>' + escapeHtml(m.name) + '</span><span class="abt">' + escapeHtml(m.abteilung) + '</span></div>'; }).join("")
+      : '<div class="fl-mtg-item" style="color:#9ca3af">Keine Meetings auf dieser Ebene.</div>';
+    _listEl.innerHTML = '<div class="fl-mtg-list">'
+      + '<div class="fl-mtg-list-head"><span style="border-left:4px solid ' + FL_COLORS[fl] + ';padding-left:8px">' + ms.length + ' Meeting' + (ms.length===1?"":"s") + ' · ' + FL_LABELS[fl] + '</span>'
+      + '<button class="fl-mtg-list-close" title="Schließen" onclick="var e=document.getElementById(\'fl-pyramide-liste\');e.innerHTML=\'\';e.dataset.open=\'\'">&times;</button></div>'
+      + '<div class="fl-mtg-list-body">' + items + '</div></div>';
+    _listEl.dataset.open = fl;
+  }
+  if (_pyEl && _pyEl.on && _listEl) {
+    _pyEl.on("plotly_hover", function() { var d = _pyEl.querySelector(".nsewdrag"); if (d) d.style.cursor = "pointer"; });
+    _pyEl.on("plotly_unhover", function() { var d = _pyEl.querySelector(".nsewdrag"); if (d) d.style.cursor = "default"; });
+    _pyEl.on("plotly_click", function(d) {
+      if (!d.points || !d.points.length) return;
+      var fl = FL_KEYS[d.points[0].pointIndex];
+      if (!fl) return;
+      if (_listEl.dataset.open === fl) { _listEl.innerHTML = ""; _listEl.dataset.open = ""; return; }
+      _showFLList(fl);
+    });
+  }
+
+  const a = document.getElementById("fl-alert-f1");
+  if (a) {
+    if (counts[1] === 0) {
+      a.innerHTML = "<b>⚠ Keine FL2-Meetings erkannt.</b> Wie werden abteilungsübergreifende Abhängigkeiten koordiniert? Möglicherweise durch Ad-hoc-Eskalation oder informelle Kanäle.";
+      a.className = "fl-alert fl-alert-warn";
+    } else if (counts[2] === 0) {
+      a.innerHTML = "<b>⚠ Keine FL3-Meetings erfasst – Pyramide ohne Spitze.</b> Entweder fehlt die strategische Ebene, oder (wahrscheinlicher bei Daten aus FL1/FL2-Sicht) sie wurde noch nicht eingepflegt. Strategische Meetings ergänzen für ein vollständiges Bild.";
+      a.className = "fl-alert fl-alert-warn";
+    } else if (counts[1] < counts[2]) {
+      a.innerHTML = `<b>⚠ FL2 (${counts[1]}) kleiner als FL3 (${counts[2]}).</b> Die Koordinationsebene ist schwächer als die strategische Ebene – klassisches Dysfunktionssignal.`;
+      a.className = "fl-alert fl-alert-warn";
+    } else {
+      a.innerHTML = `<b>✓ Kommunikationspyramide stimmig</b> (FL1 ≥ FL2 ≥ FL3). Überprüfe trotzdem die Qualität der FL2-Meetings im Wirkungsdiagramm.`;
+      a.className = "fl-alert fl-alert-ok";
+    }
+    a.style.display = "";
+  }
+}
+
+// ── F2: FL2-Verbindungsmatrix ──────────────────────────────────────────────
+function _renderFLMatrix(aktive, byFL) {
+  const mainDepts = allDepts.filter(d => !SPECIAL_DEPTS.find(s => s.key === d));
+  const conn = {};
+  byFL["FL2"].forEach(m => {
+    const abtSet = new Set([m.abteilung]);
+    m.teilnehmer.forEach(t => { const a = effectivePersonAbt[t]; if (a && mainDepts.includes(a)) abtSet.add(a); });
+    const arr = [...abtSet].filter(a => mainDepts.includes(a));
+    for (let i = 0; i < arr.length; i++)
+      for (let j = i+1; j < arr.length; j++) {
+        const [a, b] = [arr[i], arr[j]].sort();
+        conn[a + "||" + b] = (conn[a + "||" + b] || 0) + 1;
+      }
+  });
+
+  const n = mainDepts.length;
+  if (n < 2) {
+    document.getElementById("chart-fl-matrix").innerHTML =
+      '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Mindestens 2 Abteilungen erforderlich.</p>';
+  } else {
+    const z = mainDepts.map((_, i) => mainDepts.map((_, j) => {
+      if (i === j) return null;
+      const [a, b] = [mainDepts[i], mainDepts[j]].sort();
+      return conn[a + "||" + b] || 0;
+    }));
+    Plotly.newPlot("chart-fl-matrix", [{
+      type: "heatmap", x: mainDepts, y: mainDepts, z,
+      text: z.map(r => r.map(v => v === null ? "" : String(v))),
+      texttemplate: "%{text}",
+      colorscale: [[0, "#f0f9ff"], [0.001, "#bfdbfe"], [1, "#1e40af"]],
+      showscale: false, zmin: 0, hoverongaps: false,
+      hovertemplate: "%{y} ↔ %{x}: %{z} FL2-Meeting(s)<extra></extra>",
+      xgap: 2, ygap: 2
     }], {
       ...LAYOUT_BASE,
-      height: 200, margin: { l: 160, r: 40, t: 16, b: 40 },
-      xaxis: { title: "Anzahl Meetings", zeroline: false, gridcolor: COLORS.gridFine },
-      yaxis: { automargin: true, ticks: 'outside', ticklen: 5 }
+      height: Math.max(300, n * 38 + 80),
+      margin: { l: 140, r: 20, t: 20, b: 120 },
+      xaxis: { tickangle: -40, automargin: true },
+      yaxis: { automargin: true }
+    }, { displayModeBar: false });
+  }
+
+  const a = document.getElementById("fl-alert-f2");
+  if (a && n >= 2) {
+    const missing = [];
+    for (let i = 0; i < n; i++)
+      for (let j = i+1; j < n; j++) {
+        const [d1, d2] = [mainDepts[i], mainDepts[j]].sort();
+        if (!conn[d1 + "||" + d2]) missing.push(`${d1} ↔ ${d2}`);
+      }
+    if (missing.length === 0) {
+      a.innerHTML = "<b>✓ Alle Abteilungen haben mind. eine FL2-Verbindung.</b>";
+      a.className = "fl-alert fl-alert-ok";
+    } else {
+      const shown = missing.slice(0, 5).join(" · ");
+      const more  = missing.length > 5 ? ` (+${missing.length - 5} weitere)` : "";
+      a.innerHTML = `<b>⚠ ${missing.length} fehlende FL2-Verbindungen</b> (kein gemeinsames Koordinationsformat):<br>${shown}${more}`;
+      a.className = "fl-alert fl-alert-warn";
+    }
+    a.style.display = "";
+  }
+}
+
+// ── F3: Wirkung nach Flugebene ─────────────────────────────────────────────
+function _renderFLWirkung(aktive, byFL) {
+  const rated = aktive.filter(m => m.flugebene && m.wert !== null);
+  if (rated.length < 3) {
+    document.getElementById("chart-fl-wirkung").innerHTML =
+      '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Zu wenig Wirkungsbewertungen – Wirkung (1–4) in der Urliste ergänzen.</p>';
+  } else {
+    Plotly.newPlot("chart-fl-wirkung", FL_KEYS.map(fl => {
+      const ms = rated.filter(m => m.flugebene === fl);
+      return {
+        type: "box", name: FL_LABELS[fl],
+        y: ms.map(m => m.wirkungEffektiv), text: ms.map(m => m.name),
+        marker: { color: FL_COLORS[fl], size: 6 },
+        line: { color: FL_COLORS[fl] },
+        fillcolor: FL_COLORS[fl] + "22",
+        boxpoints: "all", jitter: 0.3, pointpos: 0,
+        hovertemplate: "%{text}<br>Wirkung: %{y}<extra></extra>"
+      };
+    }), {
+      ...LAYOUT_BASE,
+      height: 320, margin: { l: 50, r: 30, t: 16, b: 60 },
+      yaxis: { title: "Wirkung (1–4)", range: [0.5, 4.5], dtick: 1, gridcolor: COLORS.gridFine },
+      xaxis: { automargin: true }, showlegend: false
     }, { displayModeBar: false });
 
-    // Klick auf einen Balken → scrollbare Liste der Meetings dieser Ebene (skaliert für 2 wie 47)
-    var _pyEl = document.getElementById("chart-fl-pyramide");
-    var _listEl = document.getElementById("fl-pyramide-liste");
-    if (_listEl) { _listEl.innerHTML = ""; _listEl.dataset.open = ""; }
-    function _showFLList(fl) {
-      var ms = (byFL[fl] || []).slice().sort(function(x,y){ return String(x.name).localeCompare(String(y.name)); });
-      var items = ms.length
-        ? ms.map(function(m){ return '<div class="fl-mtg-item"><span>' + escapeHtml(m.name) + '</span><span class="abt">' + escapeHtml(m.abteilung) + '</span></div>'; }).join("")
-        : '<div class="fl-mtg-item" style="color:#9ca3af">Keine Meetings auf dieser Ebene.</div>';
-      _listEl.innerHTML = '<div class="fl-mtg-list">'
-        + '<div class="fl-mtg-list-head"><span style="border-left:4px solid ' + FL_COLORS[fl] + ';padding-left:8px">' + ms.length + ' Meeting' + (ms.length===1?"":"s") + ' · ' + FL_LABELS[fl] + '</span>'
-        + '<button class="fl-mtg-list-close" title="Schließen" onclick="var e=document.getElementById(\'fl-pyramide-liste\');e.innerHTML=\'\';e.dataset.open=\'\'">&times;</button></div>'
-        + '<div class="fl-mtg-list-body">' + items + '</div></div>';
-      _listEl.dataset.open = fl;
-    }
-    if (_pyEl && _pyEl.on && _listEl) {
-      _pyEl.on("plotly_hover", function() { var d = _pyEl.querySelector(".nsewdrag"); if (d) d.style.cursor = "pointer"; });
-      _pyEl.on("plotly_unhover", function() { var d = _pyEl.querySelector(".nsewdrag"); if (d) d.style.cursor = "default"; });
-      _pyEl.on("plotly_click", function(d) {
-        if (!d.points || !d.points.length) return;
-        var fl = FL_KEYS[d.points[0].pointIndex];
-        if (!fl) return;
-        if (_listEl.dataset.open === fl) { _listEl.innerHTML = ""; _listEl.dataset.open = ""; return; }
-        _showFLList(fl);
-      });
-    }
-
-    const a = document.getElementById("fl-alert-f1");
+    const a = document.getElementById("fl-alert-f3");
     if (a) {
-      if (counts[1] === 0) {
-        a.innerHTML = "<b>⚠ Keine FL2-Meetings erkannt.</b> Wie werden abteilungsübergreifende Abhängigkeiten koordiniert? Möglicherweise durch Ad-hoc-Eskalation oder informelle Kanäle.";
-        a.className = "fl-alert fl-alert-warn";
-      } else if (counts[2] === 0) {
-        a.innerHTML = "<b>⚠ Keine FL3-Meetings erfasst – Pyramide ohne Spitze.</b> Entweder fehlt die strategische Ebene, oder (wahrscheinlicher bei Daten aus FL1/FL2-Sicht) sie wurde noch nicht eingepflegt. Strategische Meetings ergänzen für ein vollständiges Bild.";
-        a.className = "fl-alert fl-alert-warn";
-      } else if (counts[1] < counts[2]) {
-        a.innerHTML = `<b>⚠ FL2 (${counts[1]}) kleiner als FL3 (${counts[2]}).</b> Die Koordinationsebene ist schwächer als die strategische Ebene – klassisches Dysfunktionssignal.`;
+      const low = rated.filter(m => (m.flugebene === "FL2" || m.flugebene === "FL3") && m.wert <= 2);
+      if (low.length > 0) {
+        const names = low.slice(0, 3).map(m => `„${escapeHtml(m.name)}" (${m.flugebene}, Wirkg. ${m.wert})`).join(", ");
+        const more  = low.length > 3 ? ` +${low.length - 3} weitere` : "";
+        a.innerHTML = `<b>⚠ ${low.length} Koordinations-/Strategie-Meeting(s) mit Wirkung ≤ 2:</b> ${names}${more}. Koordinationstheater?`;
         a.className = "fl-alert fl-alert-warn";
       } else {
-        a.innerHTML = `<b>✓ Kommunikationspyramide stimmig</b> (FL1 ≥ FL2 ≥ FL3). Überprüfe trotzdem die Qualität der FL2-Meetings im Wirkungsdiagramm.`;
+        a.innerHTML = "<b>✓ Alle FL2/FL3-Meetings haben Wirkung ≥ 3.</b> Koordination scheint wahrgenommenen Mehrwert zu liefern.";
         a.className = "fl-alert fl-alert-ok";
       }
       a.style.display = "";
     }
-  })();
-
-  // ── F2: FL2-Verbindungsmatrix ──────────────────────────────────────────────
-  (function() {
-    const mainDepts = allDepts.filter(d => !SPECIAL_DEPTS.find(s => s.key === d));
-    const conn = {};
-    byFL["FL2"].forEach(m => {
-      const abtSet = new Set([m.abteilung]);
-      m.teilnehmer.forEach(t => { const a = effectivePersonAbt[t]; if (a && mainDepts.includes(a)) abtSet.add(a); });
-      const arr = [...abtSet].filter(a => mainDepts.includes(a));
-      for (let i = 0; i < arr.length; i++)
-        for (let j = i+1; j < arr.length; j++) {
-          const [a, b] = [arr[i], arr[j]].sort();
-          conn[a + "||" + b] = (conn[a + "||" + b] || 0) + 1;
-        }
-    });
-
-    const n = mainDepts.length;
-    if (n < 2) {
-      document.getElementById("chart-fl-matrix").innerHTML =
-        '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Mindestens 2 Abteilungen erforderlich.</p>';
-    } else {
-      const z = mainDepts.map((_, i) => mainDepts.map((_, j) => {
-        if (i === j) return null;
-        const [a, b] = [mainDepts[i], mainDepts[j]].sort();
-        return conn[a + "||" + b] || 0;
-      }));
-      Plotly.newPlot("chart-fl-matrix", [{
-        type: "heatmap", x: mainDepts, y: mainDepts, z,
-        text: z.map(r => r.map(v => v === null ? "" : String(v))),
-        texttemplate: "%{text}",
-        colorscale: [[0, "#f0f9ff"], [0.001, "#bfdbfe"], [1, "#1e40af"]],
-        showscale: false, zmin: 0, hoverongaps: false,
-        hovertemplate: "%{y} ↔ %{x}: %{z} FL2-Meeting(s)<extra></extra>",
-        xgap: 2, ygap: 2
-      }], {
-        ...LAYOUT_BASE,
-        height: Math.max(300, n * 38 + 80),
-        margin: { l: 140, r: 20, t: 20, b: 120 },
-        xaxis: { tickangle: -40, automargin: true },
-        yaxis: { automargin: true }
-      }, { displayModeBar: false });
-    }
-
-    const a = document.getElementById("fl-alert-f2");
-    if (a && n >= 2) {
-      const missing = [];
-      for (let i = 0; i < n; i++)
-        for (let j = i+1; j < n; j++) {
-          const [d1, d2] = [mainDepts[i], mainDepts[j]].sort();
-          if (!conn[d1 + "||" + d2]) missing.push(`${d1} ↔ ${d2}`);
-        }
-      if (missing.length === 0) {
-        a.innerHTML = "<b>✓ Alle Abteilungen haben mind. eine FL2-Verbindung.</b>";
-        a.className = "fl-alert fl-alert-ok";
-      } else {
-        const shown = missing.slice(0, 5).join(" · ");
-        const more  = missing.length > 5 ? ` (+${missing.length - 5} weitere)` : "";
-        a.innerHTML = `<b>⚠ ${missing.length} fehlende FL2-Verbindungen</b> (kein gemeinsames Koordinationsformat):<br>${shown}${more}`;
-        a.className = "fl-alert fl-alert-warn";
-      }
-      a.style.display = "";
-    }
-  })();
-
-  // ── F3: Wirkung nach Flugebene ─────────────────────────────────────────────
-  (function() {
-    const rated = aktive.filter(m => m.flugebene && m.wert !== null);
-    if (rated.length < 3) {
-      document.getElementById("chart-fl-wirkung").innerHTML =
-        '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Zu wenig Wirkungsbewertungen – Wirkung (1–4) in der Urliste ergänzen.</p>';
-    } else {
-      Plotly.newPlot("chart-fl-wirkung", FL_KEYS.map(fl => {
-        const ms = rated.filter(m => m.flugebene === fl);
-        return {
-          type: "box", name: FL_LABELS[fl],
-          y: ms.map(m => m.wirkungEffektiv), text: ms.map(m => m.name),
-          marker: { color: FL_COLORS[fl], size: 6 },
-          line: { color: FL_COLORS[fl] },
-          fillcolor: FL_COLORS[fl] + "22",
-          boxpoints: "all", jitter: 0.3, pointpos: 0,
-          hovertemplate: "%{text}<br>Wirkung: %{y}<extra></extra>"
-        };
-      }), {
-        ...LAYOUT_BASE,
-        height: 320, margin: { l: 50, r: 30, t: 16, b: 60 },
-        yaxis: { title: "Wirkung (1–4)", range: [0.5, 4.5], dtick: 1, gridcolor: COLORS.gridFine },
-        xaxis: { automargin: true }, showlegend: false
-      }, { displayModeBar: false });
-
-      const a = document.getElementById("fl-alert-f3");
-      if (a) {
-        const low = rated.filter(m => (m.flugebene === "FL2" || m.flugebene === "FL3") && m.wert <= 2);
-        if (low.length > 0) {
-          const names = low.slice(0, 3).map(m => `„${escapeHtml(m.name)}" (${m.flugebene}, Wirkg. ${m.wert})`).join(", ");
-          const more  = low.length > 3 ? ` +${low.length - 3} weitere` : "";
-          a.innerHTML = `<b>⚠ ${low.length} Koordinations-/Strategie-Meeting(s) mit Wirkung ≤ 2:</b> ${names}${more}. Koordinationstheater?`;
-          a.className = "fl-alert fl-alert-warn";
-        } else {
-          a.innerHTML = "<b>✓ Alle FL2/FL3-Meetings haben Wirkung ≥ 3.</b> Koordination scheint wahrgenommenen Mehrwert zu liefern.";
-          a.className = "fl-alert fl-alert-ok";
-        }
-        a.style.display = "";
-      }
-    }
-  })();
-
-  // ── F4: Brückenkopf-Heatmap ────────────────────────────────────────────────
-  (function() {
-    const pFlH = {};
-    aktive.forEach(m => {
-      if (!m.flugebene) return;
-      const h = monthlyHours(m);
-      m.teilnehmer.forEach(t => {
-        if (!pFlH[t]) pFlH[t] = { FL1: 0, FL2: 0, FL3: 0 };
-        pFlH[t][m.flugebene] += h;
-      });
-    });
-    const bridge = Object.entries(pFlH)
-      .filter(([, h]) => [h.FL1 > 0, h.FL2 > 0, h.FL3 > 0].filter(Boolean).length >= 2)
-      .sort((a, b) => b[1].FL2 - a[1].FL2)
-      .slice(0, 25);
-
-    if (bridge.length === 0) {
-      document.getElementById("chart-fl-bruecke").innerHTML =
-        '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Keine Personen mit Präsenz auf mehreren Ebenen gefunden.</p>';
-    } else {
-      const persons = bridge.map(([p]) => p);
-      const z = persons.map((_, i) => FL_KEYS.map(fl => +bridge[i][1][fl].toFixed(1)));
-      Plotly.newPlot("chart-fl-bruecke", [{
-        type: "heatmap",
-        x: FL_KEYS.map(fl => FL_LABELS[fl]),
-        y: persons, z,
-        text: persons.map((_, i) => FL_KEYS.map(fl => bridge[i][1][fl] > 0 ? bridge[i][1][fl].toFixed(1) : "")),
-        texttemplate: "%{text}",
-        colorscale: [[0, "#f8fafc"], [1, "#2176ae"]],
-        showscale: false, zmin: 0,
-        hovertemplate: "%{y}<br>%{x}: %{z:.1f} h/Mo<extra></extra>",
-        xgap: 3, ygap: 3
-      }], {
-        ...LAYOUT_BASE,
-        height: Math.max(220, bridge.length * 26 + 80),
-        margin: { l: 120, r: 40, t: 40, b: 20 },
-        xaxis: { side: "top", automargin: true },
-        yaxis: { automargin: true, autorange: "reversed" }
-      }, { displayModeBar: false });
-    }
-
-    const a = document.getElementById("fl-alert-f4");
-    if (a) {
-      const allThree = Object.entries(pFlH)
-        .filter(([, h]) => h.FL1 > 0 && h.FL2 > 0 && h.FL3 > 0)
-        .sort((x, y) => (y[1].FL1+y[1].FL2+y[1].FL3) - (x[1].FL1+x[1].FL2+x[1].FL3));
-      if (allThree.length > 0) {
-        const names = allThree.slice(0, 3).map(([p, h]) => `${escapeHtml(p)} (${(h.FL1+h.FL2+h.FL3).toFixed(0)} h/Mo)`).join(", ");
-        const more  = allThree.length > 3 ? ` +${allThree.length - 3} weitere` : "";
-        a.innerHTML = `<b>⚠ ${allThree.length} Person(en) auf allen 3 Ebenen:</b> ${names}${more}. Informationsrouter oder echter Entscheider?`;
-        a.className = "fl-alert fl-alert-warn";
-      } else {
-        a.innerHTML = "<b>✓ Keine Person auf allen 3 Ebenen gleichzeitig.</b> Rollentrennung zwischen Operativ, Koordination und Strategie ist erkennbar.";
-        a.className = "fl-alert fl-alert-ok";
-      }
-      a.style.display = "";
-    }
-  })();
-
-  // ── F5: Rhythmus-Level-Matrix ──────────────────────────────────────────────
-  (function() {
-    const EXPECTED  = { FL1: ["täglich","wöchentlich"], FL2: ["wöchentlich","zweiwöchentlich","dreiwöchentlich"], FL3: ["monatlich","quartalsweise"] };
-
-    const buckets = {};
-    aktive.forEach(m => {
-      if (!m.flugebene) return;
-      const key = m.flugebene + "||" + m.rhythmus_klasse;
-      if (!buckets[key]) buckets[key] = { fl: m.flugebene, r: m.rhythmus_klasse, meetings: [], h: 0 };
-      buckets[key].meetings.push(m.name);
-      buckets[key].h += monthlyHours(m);
-    });
-
-    const vals = Object.values(buckets);
-    if (vals.length === 0) {
-      document.getElementById("chart-fl-frequenz").innerHTML =
-        '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Keine Daten verfügbar.</p>';
-    } else {
-      const traces = vals.map(b => {
-        const bad  = FL_MISMATCH[b.fl] && FL_MISMATCH[b.fl].includes(b.r);
-        const good = EXPECTED[b.fl] && EXPECTED[b.fl].includes(b.r);
-        const col  = bad ? "#ef4444" : (good ? FL_COLORS[b.fl] : "#d4a843");
-        const names = escapeHtml(b.meetings.slice(0,3).join(", ")) + (b.meetings.length > 3 ? ` +${b.meetings.length-3}` : "");
-        return {
-          type: "scatter", mode: "markers",
-          x: [b.r], y: [b.fl],
-          marker: { size: Math.max(12, Math.min(52, b.h * 4)), color: col + "99", line: { color: col, width: 2 } },
-          text: [`${names}<br>${b.h.toFixed(1)} h/Mo`],
-          hovertemplate: "%{x} × %{y}<br>%{text}<extra></extra>",
-          showlegend: false
-        };
-      });
-      Plotly.newPlot("chart-fl-frequenz", traces, {
-        ...LAYOUT_BASE,
-        height: 260, margin: { l: 110, r: 30, t: 16, b: 80 },
-        xaxis: { categoryorder: "array", categoryarray: RHYTHMUS_ORDER, tickangle: -30, automargin: true, gridcolor: COLORS.gridFine },
-        yaxis: { categoryorder: "array", categoryarray: ["FL1","FL2","FL3"], automargin: true, gridcolor: COLORS.gridFine },
-        plot_bgcolor: "#f8fafc"
-      }, { displayModeBar: false });
-    }
-
-    const a = document.getElementById("fl-alert-f5");
-    if (a) {
-      const bad = Object.values(buckets).filter(b => FL_MISMATCH[b.fl] && FL_MISMATCH[b.fl].includes(b.r));
-      if (bad.length > 0) {
-        const EXPECTED_TEXT = { FL1: "täglich/wöchentlich", FL2: "zwei-/dreiwöchentlich", FL3: "monatlich/quartalsweise" };
-        var rows = bad.map(function(b) {
-          var mNames = escapeHtml(b.meetings.slice(0,2).join(', ')) + (b.meetings.length > 2 ? ' +' + (b.meetings.length-2) : '');
-          var why = b.fl + ' erwartet ' + (EXPECTED_TEXT[b.fl]||'') + ', hat aber ' + b.r;
-          return '<div style="padding:3px 0;border-top:1px solid #fcd34d33">'
-            + '<span style="font-weight:600">' + mNames + '</span>'
-            + '<span style="color:#b45309;margin-left:6px;font-size:.78rem">' + why + '</span>'
-            + '</div>';
-        }).join('');
-        a.innerHTML = '<b>⚠ ' + bad.length + ' Meeting(s) mit unpassender Frequenz:</b>' + rows;
-        a.className = "fl-alert fl-alert-warn";
-      } else {
-        a.innerHTML = "<b>✓ Alle Meetings haben eine zur Ebene passende Häufigkeit.</b>";
-        a.className = "fl-alert fl-alert-ok";
-      }
-      a.style.display = "";
-    }
-  })();
-
-  _renderFLSchluesselFragen(aktive, byFL);
+  }
 }
+
+// ── F4: Brückenkopf-Heatmap ────────────────────────────────────────────────
+function _renderFLBrueckenkoepfe(aktive, byFL) {
+  const pFlH = {};
+  aktive.forEach(m => {
+    if (!m.flugebene) return;
+    const h = monthlyHours(m);
+    m.teilnehmer.forEach(t => {
+      if (!pFlH[t]) pFlH[t] = { FL1: 0, FL2: 0, FL3: 0 };
+      pFlH[t][m.flugebene] += h;
+    });
+  });
+  const bridge = Object.entries(pFlH)
+    .filter(([, h]) => [h.FL1 > 0, h.FL2 > 0, h.FL3 > 0].filter(Boolean).length >= 2)
+    .sort((a, b) => b[1].FL2 - a[1].FL2)
+    .slice(0, 25);
+
+  if (bridge.length === 0) {
+    document.getElementById("chart-fl-bruecke").innerHTML =
+      '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Keine Personen mit Präsenz auf mehreren Ebenen gefunden.</p>';
+  } else {
+    const persons = bridge.map(([p]) => p);
+    const z = persons.map((_, i) => FL_KEYS.map(fl => +bridge[i][1][fl].toFixed(1)));
+    Plotly.newPlot("chart-fl-bruecke", [{
+      type: "heatmap",
+      x: FL_KEYS.map(fl => FL_LABELS[fl]),
+      y: persons, z,
+      text: persons.map((_, i) => FL_KEYS.map(fl => bridge[i][1][fl] > 0 ? bridge[i][1][fl].toFixed(1) : "")),
+      texttemplate: "%{text}",
+      colorscale: [[0, "#f8fafc"], [1, "#2176ae"]],
+      showscale: false, zmin: 0,
+      hovertemplate: "%{y}<br>%{x}: %{z:.1f} h/Mo<extra></extra>",
+      xgap: 3, ygap: 3
+    }], {
+      ...LAYOUT_BASE,
+      height: Math.max(220, bridge.length * 26 + 80),
+      margin: { l: 120, r: 40, t: 40, b: 20 },
+      xaxis: { side: "top", automargin: true },
+      yaxis: { automargin: true, autorange: "reversed" }
+    }, { displayModeBar: false });
+  }
+
+  const a = document.getElementById("fl-alert-f4");
+  if (a) {
+    const allThree = Object.entries(pFlH)
+      .filter(([, h]) => h.FL1 > 0 && h.FL2 > 0 && h.FL3 > 0)
+      .sort((x, y) => (y[1].FL1+y[1].FL2+y[1].FL3) - (x[1].FL1+x[1].FL2+x[1].FL3));
+    if (allThree.length > 0) {
+      const names = allThree.slice(0, 3).map(([p, h]) => `${escapeHtml(p)} (${(h.FL1+h.FL2+h.FL3).toFixed(0)} h/Mo)`).join(", ");
+      const more  = allThree.length > 3 ? ` +${allThree.length - 3} weitere` : "";
+      a.innerHTML = `<b>⚠ ${allThree.length} Person(en) auf allen 3 Ebenen:</b> ${names}${more}. Informationsrouter oder echter Entscheider?`;
+      a.className = "fl-alert fl-alert-warn";
+    } else {
+      a.innerHTML = "<b>✓ Keine Person auf allen 3 Ebenen gleichzeitig.</b> Rollentrennung zwischen Operativ, Koordination und Strategie ist erkennbar.";
+      a.className = "fl-alert fl-alert-ok";
+    }
+    a.style.display = "";
+  }
+}
+
+// ── F5: Rhythmus-Level-Matrix ──────────────────────────────────────────────
+function _renderFLRhythmusMatrix(aktive, byFL) {
+  const EXPECTED  = { FL1: ["täglich","wöchentlich"], FL2: ["wöchentlich","zweiwöchentlich","dreiwöchentlich"], FL3: ["monatlich","quartalsweise"] };
+
+  const buckets = {};
+  aktive.forEach(m => {
+    if (!m.flugebene) return;
+    const key = m.flugebene + "||" + m.rhythmus_klasse;
+    if (!buckets[key]) buckets[key] = { fl: m.flugebene, r: m.rhythmus_klasse, meetings: [], h: 0 };
+    buckets[key].meetings.push(m.name);
+    buckets[key].h += monthlyHours(m);
+  });
+
+  const vals = Object.values(buckets);
+  if (vals.length === 0) {
+    document.getElementById("chart-fl-frequenz").innerHTML =
+      '<p style="padding:20px;color:#7a9e9a;font-size:.85em">Keine Daten verfügbar.</p>';
+  } else {
+    const traces = vals.map(b => {
+      const bad  = FL_MISMATCH[b.fl] && FL_MISMATCH[b.fl].includes(b.r);
+      const good = EXPECTED[b.fl] && EXPECTED[b.fl].includes(b.r);
+      const col  = bad ? "#ef4444" : (good ? FL_COLORS[b.fl] : "#d4a843");
+      const names = escapeHtml(b.meetings.slice(0,3).join(", ")) + (b.meetings.length > 3 ? ` +${b.meetings.length-3}` : "");
+      return {
+        type: "scatter", mode: "markers",
+        x: [b.r], y: [b.fl],
+        marker: { size: Math.max(12, Math.min(52, b.h * 4)), color: col + "99", line: { color: col, width: 2 } },
+        text: [`${names}<br>${b.h.toFixed(1)} h/Mo`],
+        hovertemplate: "%{x} × %{y}<br>%{text}<extra></extra>",
+        showlegend: false
+      };
+    });
+    Plotly.newPlot("chart-fl-frequenz", traces, {
+      ...LAYOUT_BASE,
+      height: 260, margin: { l: 110, r: 30, t: 16, b: 80 },
+      xaxis: { categoryorder: "array", categoryarray: RHYTHMUS_ORDER, tickangle: -30, automargin: true, gridcolor: COLORS.gridFine },
+      yaxis: { categoryorder: "array", categoryarray: ["FL1","FL2","FL3"], automargin: true, gridcolor: COLORS.gridFine },
+      plot_bgcolor: "#f8fafc"
+    }, { displayModeBar: false });
+  }
+
+  const a = document.getElementById("fl-alert-f5");
+  if (a) {
+    const bad = Object.values(buckets).filter(b => FL_MISMATCH[b.fl] && FL_MISMATCH[b.fl].includes(b.r));
+    if (bad.length > 0) {
+      const EXPECTED_TEXT = { FL1: "täglich/wöchentlich", FL2: "zwei-/dreiwöchentlich", FL3: "monatlich/quartalsweise" };
+      var rows = bad.map(function(b) {
+        var mNames = escapeHtml(b.meetings.slice(0,2).join(', ')) + (b.meetings.length > 2 ? ' +' + (b.meetings.length-2) : '');
+        var why = b.fl + ' erwartet ' + (EXPECTED_TEXT[b.fl]||'') + ', hat aber ' + b.r;
+        return '<div style="padding:3px 0;border-top:1px solid #fcd34d33">'
+          + '<span style="font-weight:600">' + mNames + '</span>'
+          + '<span style="color:#b45309;margin-left:6px;font-size:.78rem">' + why + '</span>'
+          + '</div>';
+      }).join('');
+      a.innerHTML = '<b>⚠ ' + bad.length + ' Meeting(s) mit unpassender Frequenz:</b>' + rows;
+      a.className = "fl-alert fl-alert-warn";
+    } else {
+      a.innerHTML = "<b>✓ Alle Meetings haben eine zur Ebene passende Häufigkeit.</b>";
+      a.className = "fl-alert fl-alert-ok";
+    }
+    a.style.display = "";
+  }
+}
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // FL Guided Experience – Einführung, Datenperspektive, Schlüsselfragen
