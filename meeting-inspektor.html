@@ -998,20 +998,12 @@ function detectSeparator(text) {
   return ",";
 }
 
-function parseData(text) {
-  // Strip UTF-8 BOM if present (Excel/Numbers CSV exports)
-  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-  const sep = detectSeparator(text);
-  // Logische Zeilen: quoted Felder mit eingebetteten Zeilenumbrüchen bleiben zusammen
-  const lines = splitIntoRows(text);
-  if (lines.length < 2) throw new Error("Zu wenig Zeilen – mindestens Header + 1 Datensatz erwartet.");
-
-  // Header-Zeile finden – beim ⌘A+⌘C aus Confluence landen Seitenname, Navigation
-  // und Breadcrumbs in den ersten Zeilen, BEVOR die eigentliche Tabelle beginnt.
-  // Wichtig: Navigationszeilen können ebenfalls "Abt." und "Meeting" enthalten (z.B.
-  // "Abt.übergreifende Meeting-Dokumentation") – daher MUSS die Zeile auch wirklich
-  // ≥5 Spalten haben (col count), sonst wird sie als falsch-positiver Header gezählt.
-  let headerLineIdx = -1;
+// Header-Zeile finden – beim ⌘A+⌘C aus Confluence landen Seitenname, Navigation
+// und Breadcrumbs in den ersten Zeilen, BEVOR die eigentliche Tabelle beginnt.
+// Wichtig: Navigationszeilen können ebenfalls "Abt." und "Meeting" enthalten (z.B.
+// "Abt.übergreifende Meeting-Dokumentation") – daher MUSS die Zeile auch wirklich
+// ≥5 Spalten haben (col count), sonst wird sie als falsch-positiver Header gezählt.
+function _detectHeaderLine(lines, sep) {
   for (let i = 0; i < Math.min(lines.length, 100); i++) {
     const l    = lines[i].toLowerCase();
     const cols = lines[i].split(sep);
@@ -1023,21 +1015,18 @@ function parseData(text) {
     const hasMany = hasEnoughCols && l.includes("status");
     // hasAbt && hasMtg muss AUCH hasEnoughCols erfüllen – sonst fangen wir
     // Navigations-/Breadcrumb-Zeilen ab, die zufällig beide Keywords enthalten.
-    if ((hasAbt && hasMtg && hasEnoughCols) || hasMany) {
-      headerLineIdx = i;
-      break;
-    }
+    if ((hasAbt && hasMtg && hasEnoughCols) || hasMany) return i;
   }
-  // Kein Header gefunden → erstes Zeile mit ≥5 Spalten nehmen
-  if (headerLineIdx === -1) {
-    for (let i = 0; i < Math.min(lines.length, 100); i++) {
-      if (lines[i].split(sep).length >= 5) { headerLineIdx = i; break; }
-    }
+  // Kein Header gefunden → erste Zeile mit ≥5 Spalten nehmen
+  for (let i = 0; i < Math.min(lines.length, 100); i++) {
+    if (lines[i].split(sep).length >= 5) return i;
   }
-  if (headerLineIdx === -1) headerLineIdx = 0;
-  const headerRaw = lines[headerLineIdx].split(sep).map(h => h.trim().toLowerCase());
+  return 0;
+}
 
-  // Column index mapping (case-insensitive, flexible)
+// Spalten-Zuordnung (case-insensitive, flexibel) inkl. positionsbasiertem Fallback.
+// Wirft einen Fehler, wenn Pflicht-Spalten auch danach fehlen.
+function _mapColumns(headerRaw) {
   const colMap = {
     abteilung: findCol(headerRaw, ["abteilung","abt"]),
     name:      findCol(headerRaw, ["meeting-name","meeting name","meetingname","meeting","name","titel"]),
@@ -1085,6 +1074,123 @@ function parseData(text) {
       `Erkannte Header: "${headerRaw.join(" | ")}"`
     );
   }
+  return colMap;
+}
+
+// Wirkung – Format: "3" | "/2" | "1/3" | "3/4/2"
+// Erster Wert = Verantwortliche(r), weitere = Teilnehmer-Feedback.
+// Leerstellen werden ignoriert (parseInt("") = NaN → Filter greift).
+function _parseWirkung(raw) {
+  var _wertRaw = (raw || "").trim();
+  var _wertParts = _wertRaw ? _wertRaw.split("/") : [];
+  var _wertV = _wertParts.length > 0 && _wertParts[0].trim() ? parseInt(_wertParts[0].trim(), 10) : null;
+  var wertVerantwortlich = (_wertV >= 1 && _wertV <= 4) ? _wertV : null;
+  var wertTeilnList = _wertParts.slice(1).map(function(p){ return parseInt(p.trim(), 10); }).filter(function(v){ return v >= 1 && v <= 4; });
+  var wertTeilnehmerAvg = wertTeilnList.length > 0 ? wertTeilnList.reduce(function(a,b){ return a+b; }, 0) / wertTeilnList.length : null;
+  var _allWerte = (wertVerantwortlich !== null ? [wertVerantwortlich] : []).concat(wertTeilnList);
+  var wert = _allWerte.length > 0 ? _allWerte.reduce(function(a,b){ return a+b; }, 0) / _allWerte.length : null;
+  var wirkungEffektiv = (wertTeilnehmerAvg !== null) ? wertTeilnehmerAvg : wert;
+  return { wert, wirkungEffektiv, wertVerantwortlich, wertTeilnehmerAvg, wirkungRaw: _wertRaw };
+}
+
+// Eine Datenzeile → Meeting-Objekt (oder null für leere/Section-Header-Zeilen).
+// canonAbbr wird von parseData übergeben (Kürzel-Deduplication pro Import-Lauf).
+function _parseMeetingRow(cells, colMap, canonAbbr) {
+  const get = (key) => (colMap[key] !== -1 && cells[colMap[key]] !== undefined)
+    ? cells[colMap[key]].trim() : "";
+
+  const abteilung = get("abteilung");
+  const name = get("name");
+  // Zeilen ohne Meeting-Name überspringen – das sind leere Zeilen ODER
+  // Section-Header-Zeilen in Confluence (zusammengeführte Zellen über alle Spalten,
+  // z.B. "PCTAC/DC" als Trennzeile). Diese liefern abteilung≠"" aber name="".
+  if (!name) return null;
+
+  // Parse Teilnehmer – Trennzeichen: Komma, Semikolon oder Zeilenumbruch
+  // (Confluence kann Zellen manchmal mit Newline statt Komma exportieren)
+  const teilnRaw = get("teiln");
+  const teilnehmer = teilnRaw
+    ? teilnRaw.split(/[,;\n\r]+/).map(t => canonAbbr(normalizeAlias(t.trim()))).filter(Boolean)
+    : [];
+
+  const rhythmusRaw = get("rhythmus");
+  const rhythmus_klasse = normalizeRhythmus(rhythmusRaw);
+  const wochentage = extractWochentage(rhythmusRaw);
+
+  // Abteilungsübergreifend – aus Spalte lesen oder aus Teilnehmern ableiten
+  let uebergr_val = get("uebergr");
+  let abteilungsuebergreifend;
+  if (uebergr_val !== "") {
+    abteilungsuebergreifend = /ja|yes|x|true|1|✓/i.test(uebergr_val);
+  } else {
+    // Ableiten: mehr als eine Abteilung unter Teilnehmern?
+    const abts = new Set(teilnehmer.map(t => PERSON_ABT[t]).filter(Boolean));
+    abteilungsuebergreifend = abts.size > 1;
+  }
+
+  // Dauer – optionale Spalte; Ganzzahl in Minuten, null wenn leer/ungültig
+  const dauerRaw = get("dauer");
+  const dauer = dauerRaw ? (parseInt(dauerRaw.replace(/[^0-9]/g, ""), 10) || null) : null;
+
+  const wirkung = _parseWirkung(get("wert"));
+
+  // Platzhalter – aus Spalte lesen
+  let platzh_val = get("platzh");
+  const ist_platzhalter = platzh_val !== ""
+    ? /ja|yes|x|true|1|✓/i.test(platzh_val)
+    : false;
+
+  const statusRaw = get("status");
+  const status = /aktiv/i.test(statusRaw) ? "Aktiv"
+    : /geplant|planned/i.test(statusRaw) ? "Geplant"
+    : statusRaw || "Aktiv";
+
+  return {
+    abteilung: abteilung || "–",
+    name: name || "–",
+    kategorie: get("kategorie") || "–",
+    zweck: get("zweck"),
+    verantwortlich: canonAbbr(normalizeAlias(get("vera"))),
+    teilnehmer,
+    _originalTeilnehmer: teilnehmer.slice(), // Unverändertes Original für Gruppen-Expansion
+    teilnehmer_anzahl: teilnehmer.length,
+    rhythmus_raw: rhythmusRaw,
+    rhythmus_klasse,
+    wochentage,
+    dauer,          // Minuten pro Sitzung (null = nicht angegeben)
+    wert: wirkung.wert,                     // Durchschnitt aller Bewertungen (null = nicht bewertet)
+    wirkungEffektiv: wirkung.wirkungEffektiv, // Anzeigewert: wertTeilnehmerAvg wenn vorhanden, sonst wert
+    wertVerantwortlich: wirkung.wertVerantwortlich, // Bewertung Verantwortliche(r) (null = nicht angegeben)
+    wertTeilnehmerAvg: wirkung.wertTeilnehmerAvg,   // Ø Teilnehmer-Bewertung (null = kein Feedback)
+    _wirkungRaw: wirkung.wirkungRaw,        // Rohstring für positionsbasierte Slot-Auswertung
+    flugebene: (() => {
+      const raw = (get("flugebene") || "").toLowerCase();
+      if (/fl1|fl\s*1/i.test(raw)) return "FL1";
+      if (/fl2|fl\s*2/i.test(raw)) return "FL2";
+      if (/fl3|fl\s*3/i.test(raw)) return "FL3";
+      return null;
+    })(),
+    flugebeneAuto: !get("flugebene"), // false wenn Wert aus Import-Spalte stammt
+    infofluss: get("infofluss"),
+    status,
+    abteilungsuebergreifend,
+    ist_platzhalter,
+    learning: get("learning"),
+  };
+}
+
+// Orchestrator: Text → Meeting-Liste
+function parseData(text) {
+  // Strip UTF-8 BOM if present (Excel/Numbers CSV exports)
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const sep = detectSeparator(text);
+  // Logische Zeilen: quoted Felder mit eingebetteten Zeilenumbrüchen bleiben zusammen
+  const lines = splitIntoRows(text);
+  if (lines.length < 2) throw new Error("Zu wenig Zeilen – mindestens Header + 1 Datensatz erwartet.");
+
+  const headerLineIdx = _detectHeaderLine(lines, sep);
+  const headerRaw = lines[headerLineIdx].split(sep).map(h => h.trim().toLowerCase());
+  const colMap = _mapColumns(headerRaw);
 
   // Case-insensitive Kürzel-Deduplication: erste gesehene Schreibweise gewinnt.
   const abbrevCanonical = new Map();
@@ -1097,98 +1203,8 @@ function parseData(text) {
 
   const meetings = [];
   for (let i = headerLineIdx + 1; i < lines.length; i++) {
-    const cells = splitLine(lines[i], sep);
-    const get = (key) => (colMap[key] !== -1 && cells[colMap[key]] !== undefined)
-      ? cells[colMap[key]].trim() : "";
-
-    const abteilung = get("abteilung");
-    const name = get("name");
-    // Zeilen ohne Meeting-Name überspringen – das sind leere Zeilen ODER
-    // Section-Header-Zeilen in Confluence (zusammengeführte Zellen über alle Spalten,
-    // z.B. "PCTAC/DC" als Trennzeile). Diese liefern abteilung≠"" aber name="".
-    if (!name) continue;
-
-    // Parse Teilnehmer – Trennzeichen: Komma, Semikolon oder Zeilenumbruch
-    // (Confluence kann Zellen manchmal mit Newline statt Komma exportieren)
-    const teilnRaw = get("teiln");
-    const teilnehmer = teilnRaw
-      ? teilnRaw.split(/[,;\n\r]+/).map(t => canonAbbr(normalizeAlias(t.trim()))).filter(Boolean)
-      : [];
-
-    const rhythmusRaw = get("rhythmus");
-    const rhythmus_klasse = normalizeRhythmus(rhythmusRaw);
-    const wochentage = extractWochentage(rhythmusRaw);
-
-    // Abteilungsübergreifend – aus Spalte lesen oder aus Teilnehmern ableiten
-    let uebergr_val = get("uebergr");
-    let abteilungsuebergreifend;
-    if (uebergr_val !== "") {
-      abteilungsuebergreifend = /ja|yes|x|true|1|✓/i.test(uebergr_val);
-    } else {
-      // Ableiten: mehr als eine Abteilung unter Teilnehmern?
-      const abts = new Set(teilnehmer.map(t => PERSON_ABT[t]).filter(Boolean));
-      abteilungsuebergreifend = abts.size > 1;
-    }
-
-    // Dauer – optionale Spalte; Ganzzahl in Minuten, null wenn leer/ungültig
-    const dauerRaw = get("dauer");
-    const dauer = dauerRaw ? (parseInt(dauerRaw.replace(/[^0-9]/g, ""), 10) || null) : null;
-
-    // Wert – Format: "3" | "/2" | "1/3" | "3/4/2"
-    // Erster Wert = Verantwortliche(r), weitere = Teilnehmer-Feedback
-    var _wertRaw = (get("wert") || "").trim();
-    var _wertParts = _wertRaw ? _wertRaw.split("/") : [];
-    var _wertV = _wertParts.length > 0 && _wertParts[0].trim() ? parseInt(_wertParts[0].trim(), 10) : null;
-    var wertVerantwortlich = (_wertV >= 1 && _wertV <= 4) ? _wertV : null;
-    var wertTeilnList = _wertParts.slice(1).map(function(p){ return parseInt(p.trim(), 10); }).filter(function(v){ return v >= 1 && v <= 4; });
-    var wertTeilnehmerAvg = wertTeilnList.length > 0 ? wertTeilnList.reduce(function(a,b){ return a+b; }, 0) / wertTeilnList.length : null;
-    var _allWerte = (wertVerantwortlich !== null ? [wertVerantwortlich] : []).concat(wertTeilnList);
-    var wert = _allWerte.length > 0 ? _allWerte.reduce(function(a,b){ return a+b; }, 0) / _allWerte.length : null;
-    var wirkungEffektiv = (wertTeilnehmerAvg !== null) ? wertTeilnehmerAvg : wert;
-
-    // Platzhalter – aus Spalte lesen
-    let platzh_val = get("platzh");
-    const ist_platzhalter = platzh_val !== ""
-      ? /ja|yes|x|true|1|✓/i.test(platzh_val)
-      : false;
-
-    const statusRaw = get("status");
-    const status = /aktiv/i.test(statusRaw) ? "Aktiv"
-      : /geplant|planned/i.test(statusRaw) ? "Geplant"
-      : statusRaw || "Aktiv";
-
-    meetings.push({
-      abteilung: abteilung || "–",
-      name: name || "–",
-      kategorie: get("kategorie") || "–",
-      zweck: get("zweck"),
-      verantwortlich: canonAbbr(normalizeAlias(get("vera"))),
-      teilnehmer,
-      _originalTeilnehmer: teilnehmer.slice(), // Unverändertes Original für Gruppen-Expansion
-      teilnehmer_anzahl: teilnehmer.length,
-      rhythmus_raw: rhythmusRaw,
-      rhythmus_klasse,
-      wochentage,
-      dauer,          // Minuten pro Sitzung (null = nicht angegeben)
-      wert,           // Durchschnitt aller Bewertungen (null = nicht bewertet)
-      wirkungEffektiv, // Anzeigewert: wertTeilnehmerAvg wenn vorhanden, sonst wert
-      wertVerantwortlich,   // Bewertung Verantwortliche(r) (null = nicht angegeben)
-      wertTeilnehmerAvg,    // Ø Teilnehmer-Bewertung (null = kein Feedback)
-      _wirkungRaw: _wertRaw, // Rohstring für positionsbasierte Slot-Auswertung
-      flugebene: (() => {
-        const raw = (get("flugebene") || "").toLowerCase();
-        if (/fl1|fl\s*1/i.test(raw)) return "FL1";
-        if (/fl2|fl\s*2/i.test(raw)) return "FL2";
-        if (/fl3|fl\s*3/i.test(raw)) return "FL3";
-        return null;
-      })(),
-      flugebeneAuto: !get("flugebene"), // false wenn Wert aus Import-Spalte stammt
-      infofluss: get("infofluss"),
-      status,
-      abteilungsuebergreifend,
-      ist_platzhalter,
-      learning: get("learning"),
-    });
+    const m = _parseMeetingRow(splitLine(lines[i], sep), colMap, canonAbbr);
+    if (m) meetings.push(m);
   }
 
   if (meetings.length === 0) throw new Error("Keine Meetings erkannt. Bitte prüfe das Format.");
