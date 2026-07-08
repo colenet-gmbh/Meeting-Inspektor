@@ -674,7 +674,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "08.07.2026 09:09";
+const APP_VERSION = "08.07.2026 11:30";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1002,7 +1002,8 @@ function parseData(text) {
   // Strip UTF-8 BOM if present (Excel/Numbers CSV exports)
   if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
   const sep = detectSeparator(text);
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  // Logische Zeilen: quoted Felder mit eingebetteten Zeilenumbrüchen bleiben zusammen
+  const lines = splitIntoRows(text);
   if (lines.length < 2) throw new Error("Zu wenig Zeilen – mindestens Header + 1 Datensatz erwartet.");
 
   // Header-Zeile finden – beim ⌘A+⌘C aus Confluence landen Seitenname, Navigation
