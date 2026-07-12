@@ -675,7 +675,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "12.07.2026 13:02";
+const APP_VERSION = "12.07.2026 13:08";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1496,7 +1496,7 @@ const TAB_INFO = {
        achten: "Rechts unten = viel Zeit, wenig Wirkung → 'Optimieren'. Links oben = wenig Zeit, hohe Wirkung → 'Bereichernd'. Rechts oben = 'Effizient halten'.",
        folgefragen: "Welche Meetings liegen im Optimieren-Quadranten? Können sie gekürzt, seltener abgehalten oder abgeschafft werden?" },
   9: { title: "Alle Meetings (Tabelle)",
-       was: "Vollständige Datentabelle aller Meetings mit Echtzeit-Suche und Filter. Read-only Ansicht – alle Werte kommen aus der Confluence-Quelltabelle.",
+       was: "Vollständige Datentabelle aller Meetings mit Echtzeit-Suche und Filter. Read-only Ansicht – alle Werte kommen aus der Urliste.",
        achten: "Meetings ohne Wirkungsbewertung fehlen in der Wirkungsmatrix. Nutze die Suche, um alle Meetings einer Person oder Abteilung zu finden.",
        folgefragen: "Welche Meetings haben noch keine Wirkungsbewertung? Gibt es Meetings, die nicht mehr stattfinden, aber noch als Aktiv geführt sind?" },
   10: { title: "Flight Levels – Kommunikationsfluss-Diagnose",
@@ -2575,7 +2575,7 @@ function renderTable() {
   updateTableCount();
 }
 
-// Wirkung ist read-only – kommt aus Confluence-Quelltabelle (kein Override im Tool)
+// Wirkung ist read-only – kommt aus der Urliste (kein Override im Tool)
 
 function handleFlightLevelClick(e) {
   const td = e.target.closest(".fl-cell");
@@ -5052,7 +5052,7 @@ function saveConfig() {
     if (d !== autoVal || htmlVal || _confirmedPersons.has(p)) personAbt[p] = d; // abweichend, HTML-Override oder explizit bestätigt
   });
   const fkArr = [...fkSet].sort();
-  // Wirkung kommt aus Confluence-Quelle, kein Tool-Override
+  // Wirkung kommt aus der Urliste, kein Tool-Override
   // flugebeneOverrides: nur manuell gesetzte Werte, stabiler Schlüssel ohne idx
   const flugebeneOverrides = {};
   MEETINGS.forEach(m => {
@@ -5095,7 +5095,7 @@ function applyStoredConfig() {
     if (cfg.fkList) {
       cfg.fkList.forEach(p => { if (knownPersons.has(p)) fkSet.add(p); });
     }
-    // wertOverrides: nicht mehr im Tool pflegbar – Wirkung kommt aus Confluence
+    // wertOverrides: nicht mehr im Tool pflegbar – Wirkung kommt aus der Urliste
     // flugebeneOverrides überleben neue Imports (stabiler Schlüssel ohne idx)
     if (cfg.flugebeneOverrides) {
       MEETINGS.forEach(m => {
