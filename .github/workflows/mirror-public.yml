@@ -6,6 +6,9 @@ on:
 
 jobs:
   mirror:
+    # Guard: this file gets mirrored into braunle77/Meeting-Inspektor,
+    # where it must not run (no MIRROR_TOKEN there, would mirror onto itself)
+    if: github.repository == 'colenet-gmbh/Meeting-Inspektor'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
