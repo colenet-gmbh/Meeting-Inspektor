@@ -49,9 +49,9 @@ goals?" · FL3 "Are you turning strategy into real-world results?").
 - Referenz-Report ist bindend; bei Konflikt gewinnt die Originalquelle
 - **Escaping-Pflicht (Security-Review):** Jede aus der Urliste stammende Zeichenkette
   (Person/Kürzel, Abteilung, Meetingname, Zweck) läuft in den neu geschriebenen Sektionen
-  durch `escapeHtml` – auch in Plotly `text`/`hovertemplate`/Achsen-Kategorien. Die
-  heutigen FL-Traces escapen NICHT (Regressionsquelle); die Q-Karten escapen korrekt –
-  beim Neuschreiben erhalten
+  durch `escapeHtml` – auch in Plotly `text`/`hovertemplate`-Inhalten. Ausnahme gemäß
+  bindender Repo-Regel: `escapeHtml` nie auf Daten-Schlüssel (Plotly-Achsen-Kategorien,
+  Lookup-Keys) anwenden. Die Q-Karten escapen korrekt – beim Neuschreiben erhalten
 - Safari-Regeln (ADR 0002): keine nested Template-Literals, keine „…"-Quotes in JS
   (Bestandscode Z. ~4880 verletzt das bereits – nicht kopieren)
 - ADR 0003: reine Diagnostik; Auto-Klassifikation bleibt als gekennzeichnete Heuristik
