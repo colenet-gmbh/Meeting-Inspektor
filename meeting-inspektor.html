@@ -442,7 +442,6 @@ textarea#paste-area::placeholder{color:#cbd5e1}
       <button class="tab-btn" data-tab="4" onclick="showTab(4)">Kommunikation</button>
       <button class="tab-btn" data-tab="5" onclick="showTab(5)">Überschneidungen</button>
       <button class="tab-btn" data-tab="1" onclick="showTab(1)">Netzwerk</button>
-      <button class="tab-btn" data-tab="11" onclick="showTab(11)">Organigramm</button>
     </div>
     <div class="tab-group-sep"></div>
     <div class="tab-group tab-group-admin">
@@ -459,6 +458,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   </div>
   <div id="panel-0" class="panel" data-tab="1">
     <button class="tab-info-btn" onclick="showTabInfo(1)">ℹ</button>
+    <div id="netzwerk-briefing" style="margin-bottom:16px"></div>
     <div class="chart-card" id="chart-netzwerk"></div>
     <p class="hint" id="hint-netzwerk">Knotengröße = Anzahl Meetings · Liniendicke = Beziehungsstärke (kleine Meetings zählen stärker als große Versammlungen) · Farbe = Abteilung · Klick = Verbindungen hervorheben</p>
   </div>
@@ -571,12 +571,6 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <div id="fl-schluessel-fragen" style="margin-top:24px"></div>
   </div>
 
-  <div id="panel-org" class="panel" data-tab="11">
-    <button class="tab-info-btn" onclick="showTabInfo(11)">ℹ</button>
-    <p class="hint" style="margin-bottom:16px">Wer übernimmt Verantwortung in welchen Bereichen? Größe der Segmente = Anzahl Meetings als Verantwortliche(r). Abteilungstypen werden aus der Konfiguration übernommen.</p>
-    <div class="chart-card" id="chart-org-sunburst" style="height:520px"></div>
-  </div>
-
   <div id="panel-7" class="panel" data-tab="0">
     <button class="tab-info-btn" onclick="showTabInfo(0)">ℹ</button>
 
@@ -687,7 +681,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "16.07.2026 00:15";
+const APP_VERSION = "16.07.2026 00:43";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1572,7 +1566,6 @@ function showTab(idx) {
     if (idx === 7) renderTreemap();
     if (idx === 8) renderWirkungsMatrix();
     if (idx === 10) renderFlightLevels();
-    if (idx === 11) renderOrganigramm();
     if (idx === 12) renderBefund();
   }
   const pa = document.getElementById("personen-actions");
@@ -1704,7 +1697,60 @@ function renderNetzwerk() {
   // Cache speichern
   netCache = { pos, edges, connectedPersons, isolatedCount, degree, personMeetings };
 
+  _renderNetzwerkBriefing();
   _plotNetzwerk(true);
+}
+
+// Netzwerk-Briefing: meistvernetzte Person + Brückenpersonen (einzige Verbindung
+// zwischen zwei Abteilungen – aus der bestehenden Kantenliste berechnet, keine neue
+// Graph-Logik). Eine Brückenperson zu verlieren, kappt die einzige Verbindung
+// zwischen den betroffenen Abteilungen.
+function _renderNetzwerkBriefing() {
+  const el = document.getElementById("netzwerk-briefing");
+  if (!el || !netCache) return;
+  const { edges, degree, connectedPersons } = netCache;
+  if (!connectedPersons.length) { el.innerHTML = ''; return; }
+
+  // Meistvernetzte Person
+  const sorted = connectedPersons.slice().sort((a, b) => degree[b] - degree[a]);
+  const topPerson = sorted[0];
+
+  // Kanten nach Abteilungspaar gruppieren – nur abteilungsübergreifende Kanten
+  const pairEdges = {};
+  edges.forEach(e => {
+    const abtA = effectivePersonAbt[e.a], abtB = effectivePersonAbt[e.b];
+    if (!abtA || !abtB || abtA === abtB) return;
+    const key = [abtA, abtB].sort().join('||');
+    (pairEdges[key] = pairEdges[key] || []).push(e);
+  });
+
+  // Brückenperson: Teil der EINZIGEN Kante zwischen zwei Abteilungen
+  const bridges = {};
+  Object.keys(pairEdges).forEach(key => {
+    const es = pairEdges[key];
+    if (es.length !== 1) return;
+    const label = key.replace('||', ' ↔ ');
+    [es[0].a, es[0].b].forEach(p => (bridges[p] = bridges[p] || []).push(label));
+  });
+  const bridgePersons = Object.keys(bridges).sort((a, b) => bridges[b].length - bridges[a].length);
+
+  const topInsight = '<div class="komm-insight"><div class="komm-insight-label">Meistvernetzte Person</div>'
+    + '<div class="komm-insight-value">' + escapeHtml(topPerson) + '</div>'
+    + '<div class="komm-insight-sub">' + degree[topPerson] + ' direkte Verbindungen zu anderen Personen</div></div>';
+
+  const bridgeInsight = bridgePersons.length
+    ? '<div class="komm-insight"><div class="komm-insight-label">Brückenperson' + (bridgePersons.length === 1 ? '' : 'en') + '</div>'
+      + '<div class="komm-insight-value">' + bridgePersons.slice(0, 3).map(p => escapeHtml(p)).join(', ') + (bridgePersons.length > 3 ? ' u.a.' : '') + '</div>'
+      + '<div class="komm-insight-sub">einzige Verbindung zwischen: ' + bridgePersons.slice(0, 2).flatMap(p => bridges[p]).slice(0, 3).join(', ') + ' – fällt die Person aus, reißt die Verbindung ab</div></div>'
+    : '<div class="komm-insight"><div class="komm-insight-label">Brückenpersonen</div>'
+      + '<div class="komm-insight-value" style="color:' + COLORS.ok + '">✓ Keine erkannt</div>'
+      + '<div class="komm-insight-sub">Jede abteilungsübergreifende Verbindung wird von mind. 2 Personen getragen</div></div>';
+
+  el.innerHTML = '<div class="komm-briefing-card">'
+    + '<div class="tbr-header"><span class="tbr-title">Netzwerk – Auf einen Blick</span>'
+    + '<span class="tbr-sub">' + connectedPersons.length + ' vernetzte Personen</span></div>'
+    + '<div class="komm-insights-grid">' + topInsight + bridgeInsight + '</div>'
+    + '</div>';
 }
 
 let activeNode = null;
@@ -5548,7 +5594,6 @@ function refreshAllCharts() {
     if (m.flugebeneAuto) m.flugebene = suggestFlightLevel(m);
   });
   renderedTabs.delete(10); // Flight Levels neu rendern
-  renderedTabs.delete(11); // Organigramm neu rendern
   renderedTabs.delete(12); // Befund neu rendern
   renderedTabs.delete(0);  // Konfiguration (Personen + Datenpflege) neu rendern
   // Gruppen-Teilnehmer nach Abteilungsänderung neu prüfen
