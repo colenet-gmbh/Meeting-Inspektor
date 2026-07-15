@@ -428,6 +428,10 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 
   <div class="tab-bar">
     <div class="tab-group">
+      <button class="tab-btn active" data-tab="12" onclick="showTab(12)">Befund</button>
+    </div>
+    <div class="tab-group-sep"></div>
+    <div class="tab-group">
       <span class="tab-group-label">Analyse</span>
       <button class="tab-btn" data-tab="1" onclick="showTab(1)">Netzwerk</button>
       <button class="tab-btn" data-tab="2" onclick="showTab(2)">Abteilungen</button>
@@ -443,11 +447,16 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <div class="tab-group-sep"></div>
     <div class="tab-group tab-group-admin">
       <span class="tab-group-label">Datenpflege</span>
-      <button class="tab-btn active" data-tab="0" onclick="showTab(0)">Konfiguration</button>
+      <button class="tab-btn" data-tab="0" onclick="showTab(0)">Konfiguration</button>
       <button class="tab-btn" data-tab="9" onclick="showTab(9)">Alle Meetings</button>
     </div>
   </div>
 
+  <div id="panel-befund" class="panel active" data-tab="12">
+    <button class="tab-info-btn" onclick="showTabInfo(12)">ℹ</button>
+    <div id="befund-datenbasis" style="margin-bottom:16px"></div>
+    <div id="befund-content"></div>
+  </div>
   <div id="panel-0" class="panel" data-tab="1">
     <button class="tab-info-btn" onclick="showTabInfo(1)">ℹ</button>
     <div class="chart-card" id="chart-netzwerk"></div>
@@ -566,7 +575,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <div class="chart-card" id="chart-org-sunburst" style="height:520px"></div>
   </div>
 
-  <div id="panel-7" class="panel active" data-tab="0">
+  <div id="panel-7" class="panel" data-tab="0">
     <button class="tab-info-btn" onclick="showTabInfo(0)">ℹ</button>
 
     <div class="dp-topbar">
@@ -675,7 +684,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "12.07.2026 16:47";
+const APP_VERSION = "15.07.2026 12:19";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1390,8 +1399,9 @@ function showDashboard() {
   document.getElementById("dashboard").style.display = "block";
   renderStats();
   renderTable();
-  // Personen-Tab zuerst öffnen (Nutzer reviewt Zuordnungen, bevor er Charts sieht)
-  showTab(0);
+  // Befund-Tab zuerst öffnen: zeigt zuerst den Datenbasis-Check, dann die
+  // priorisierten Befunde – Konfiguration/Personen-Review folgt bei Bedarf von dort aus.
+  showTab(12);
 }
 
 function resetToImport() {
@@ -1459,6 +1469,10 @@ function renderStats() {
 // Tab Info Overlay – ℹ-Erklärungsbox pro Tab
 // ══════════════════════════════════════════════════════════════════════════════
 const TAB_INFO = {
+  12: { title: "Befund",
+        was: "Bündelt die wichtigsten Diagnosen aus allen Analyse-Tabs (Wirkung, Flight Levels, Engpass, Überschneidungen) in einer priorisierten Liste: kritische Befunde, Punkte zum Prüfen und der Stand der Datenqualität.",
+        achten: "Ein Befund ist nur so verlässlich wie seine Datenbasis. Befunde mit lückenhafter Datenbasis sind entsprechend gekennzeichnet – bei geringer Datenqualität lohnt sich zuerst ein Abstecher in den Tab 'Konfiguration'.",
+        folgefragen: "Welche kritischen Befunde wurden noch nicht angegangen? Reicht die Datenbasis aus, um den Befunden zu vertrauen, oder sollten zuerst Daten nachgepflegt werden?" },
   0: { title: "Konfiguration",
        was: "Zentrales Setup in Sektionen: Personen-Zuordnung (gelber Punkt = unsichere Zuordnung, ★ = Führungskraft), Abteilungstypen, Gruppen-Teilnehmer, Datenqualität und Export/Import der gesamten Konfiguration.",
        achten: "Prüfe gelb markierte Personen und korrigiere per Klick – alle Analyse-Tabs bauen darauf auf. Abteilungstypen verbessern die Flight-Level-Klassifikation. Export/Import erspart Kollegen das Neu-Setzen.",
@@ -1550,6 +1564,7 @@ function showTab(idx) {
     if (idx === 8) renderWirkungsMatrix();
     if (idx === 10) renderFlightLevels();
     if (idx === 11) renderOrganigramm();
+    if (idx === 12) renderBefund();
   }
   const pa = document.getElementById("personen-actions");
   if (pa) pa.style.display = idx === 0 ? "flex" : "none";
@@ -3980,14 +3995,12 @@ function setDeptTyp(sel) {
   showToast("Abteilungstyp gespeichert");
 }
 
-function renderQualitaetsCockpit() {
-  const grid = document.getElementById("dp-quality-grid");
-  if (!grid) return;
+// Die 7 Datenqualitäts-Metriken – von Qualitäts-Cockpit UND Befund-Tab genutzt
+// (eine Quelle, damit beide Ansichten dieselben Prozentzahlen zeigen).
+function computeQualityMetrics() {
   const total = MEETINGS.length;
-  if (total === 0) { grid.innerHTML = ""; return; }
-
   const knownPersons = Object.keys(effectivePersonAbt);
-  const metrics = [
+  return [
     { label: "Dauer erfasst",
       count: MEETINGS.filter(m => m.dauer !== null).length, tot: total,
       hint: "Nötig für Zeitlastberechnung, Engpass und Treemap.",
@@ -4018,13 +4031,22 @@ function renderQualitaetsCockpit() {
       hint: "Unsichere Personen (gelber Punkt) können Charts verzerren.",
       action: "Im Tab 'Personen' gelbe Punkte pruefen." },
   ];
+}
 
-  // Status-Ampel: eine Quelle für Balkenfarbe, Icon und Wert (≥80 grün · 50–79 gelb · <50 rot)
-  function qualStatus(pct) {
-    if (pct >= QUALITY_THRESHOLDS.green)  return { color: COLORS.ok,   icon: "✓" };
-    if (pct >= QUALITY_THRESHOLDS.yellow) return { color: COLORS.warn, icon: "⚠" };
-    return { color: COLORS.bad, icon: "✕" };
-  }
+// Status-Ampel: eine Quelle für Balkenfarbe, Icon und Wert (≥80 grün · 50–79 gelb · <50 rot)
+function qualStatus(pct) {
+  if (pct >= QUALITY_THRESHOLDS.green)  return { color: COLORS.ok,   icon: "✓" };
+  if (pct >= QUALITY_THRESHOLDS.yellow) return { color: COLORS.warn, icon: "⚠" };
+  return { color: COLORS.bad, icon: "✕" };
+}
+
+function renderQualitaetsCockpit() {
+  const grid = document.getElementById("dp-quality-grid");
+  if (!grid) return;
+  const total = MEETINGS.length;
+  if (total === 0) { grid.innerHTML = ""; return; }
+
+  const metrics = computeQualityMetrics();
 
   grid.innerHTML = metrics.map(m => {
     const pct = m.tot > 0 ? Math.round(m.count / m.tot * 100) : 100;
@@ -4893,6 +4915,226 @@ function _renderFLSchluesselFragen(aktive, byFL) {
     + makeCard(4, 'Was koennen wir aus diesen Daten nicht schlussfolgern?', q4Answer, '', q4St);
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab: Befund – bündelt bestehende Diagnosen aus Wirkung/Flight-Levels/Engpass/
+// Überschneidungen in einer priorisierten Liste. Erzeugt KEINE neue Diagnoselogik –
+// spiegelt exakt dieselben Filter/Schwellen wie die jeweiligen Detail-Tabs, damit
+// Befund-Tab und Detail-Tab immer dieselben Zahlen zeigen.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Kleiner Hinweis, wenn ein Befund auf einer lückenhaften Datenbasis beruht
+// (< 80 % erfasst) – Teil der "weichen Sperre" im Befund-Tab.
+function _basisNote(count, tot, subject) {
+  var pct = tot > 0 ? Math.round(count / tot * 100) : 100;
+  if (pct >= QUALITY_THRESHOLDS.green) return null;
+  return 'Basis: nur ' + pct + '% ' + subject + ' – Aussage eingeschränkt.';
+}
+
+function collectBefunde() {
+  var aktive = MEETINGS.filter(function(m){ return !m.ist_platzhalter; });
+  var byFL = { FL1: [], FL2: [], FL3: [] };
+  aktive.forEach(function(m){ if (byFL[m.flugebene]) byFL[m.flugebene].push(m); });
+
+  var kritisch = [], pruefen = [];
+
+  // 1) Teure Meetings mit geringer Wirkung (>= 120 Min/Mo + Wirkung <= 2) – wie FL-Schlüsselfrage Q3
+  var mitWert = aktive.filter(function(m){ return m.wert !== null && m.dauer !== null; });
+  var teureKandidaten = mitWert.filter(function(m){ return m.wirkungEffektiv <= 2 && m.dauer * freqMonthly(m) >= 120; });
+  if (teureKandidaten.length) {
+    var topTeuer = teureKandidaten.slice().sort(function(a,b){ return (b.dauer*freqMonthly(b)) - (a.dauer*freqMonthly(a)); });
+    var namenTeuer = topTeuer.slice(0,3).map(function(m){ return '"' + escapeHtml(m.name) + '"'; }).join(', ');
+    kritisch.push({
+      label: teureKandidaten.length + ' teure' + (teureKandidaten.length===1?'s':'') + ' Meeting' + (teureKandidaten.length===1?'':'s') + ' mit geringer Wirkung',
+      detail: namenTeuer + (teureKandidaten.length > 3 ? ' u.a.' : '') + ' – hohe Zeitbindung, Wirkung &le; 2. Redesign oder Abschaffung prüfen.',
+      tabIdx: 10, tabLabel: 'Flight Levels',
+      basisNote: _basisNote(mitWert.length, aktive.length, 'der Meetings mit Dauer + Wirkung bewertet')
+    });
+  }
+
+  // 2) Result-neutral-Kandidaten (FL2/FL3 mit Wirkung <= 2) – wie Flight Levels F3
+  var flBewertet = aktive.filter(function(m){ return m.wert !== null && (m.flugebene === 'FL2' || m.flugebene === 'FL3'); });
+  var resultNeutral = flBewertet.filter(function(m){ return m.wert <= 2; });
+  if (resultNeutral.length) {
+    kritisch.push({
+      label: resultNeutral.length + ' Koordinations-/Strategie-Meeting' + (resultNeutral.length===1?'':'s') + ' vermutlich result-neutral',
+      detail: 'FL2/FL3-Meetings mit Wirkung &le; 2 – möglicherweise wird nichts entschieden, alle sind hinterher so schlau wie vorher.',
+      tabIdx: 10, tabLabel: 'Flight Levels',
+      basisNote: _basisNote(flBewertet.length, byFL.FL2.length + byFL.FL3.length, 'der FL2/FL3-Meetings bewertet')
+    });
+  }
+
+  // 3) People-as-Routers (Person auf allen 3 Flight Levels präsent) – wie Flight Levels F4
+  var pFlH = _flPersonHoursByLevel(aktive);
+  var router = Object.keys(pFlH).filter(function(p){ return _flOnAllLevels(pFlH[p]); });
+  if (router.length) {
+    kritisch.push({
+      label: router.length + ' Person' + (router.length===1?'':'en') + ' auf allen 3 Flight Levels präsent',
+      detail: escapeHtml(router.slice(0,3).join(', ')) + (router.length>3?' u.a.':'') + ' – Information läuft womöglich über Personen statt über Boards. Prüfen, ob dem System ein Board fehlt.',
+      tabIdx: 10, tabLabel: 'Flight Levels',
+      basisNote: null
+    });
+  }
+
+  // 4) Koordinationslücken zwischen Abteilungen – wie Flight Levels F2
+  var mainDepts = allDepts.filter(function(d){ return !SPECIAL_DEPTS.find(function(s){ return s.key===d; }); });
+  var maxPairs = Math.round(mainDepts.length * (mainDepts.length-1) / 2);
+  if (maxPairs > 0) {
+    if (byFL.FL2.length === 0) {
+      pruefen.push({
+        label: 'Keine Koordinationsebene (FL2) erfasst',
+        detail: 'Abteilungsübergreifende Abhängigkeiten lassen sich aus den Daten nicht beurteilen – entweder existiert kein Koordinationsformat, oder es ist noch nicht in der Urliste erfasst.',
+        tabIdx: 10, tabLabel: 'Flight Levels', basisNote: null
+      });
+    } else {
+      var conn = {};
+      byFL.FL2.forEach(function(m) {
+        var abtSet = new Set([m.abteilung]);
+        m.teilnehmer.forEach(function(t){ var a = effectivePersonAbt[t]; if (a && mainDepts.includes(a)) abtSet.add(a); });
+        var arr = [...abtSet].filter(function(a){ return mainDepts.includes(a); });
+        for (var i=0;i<arr.length;i++) for (var j=i+1;j<arr.length;j++) { var k=[arr[i],arr[j]].sort().join('||'); conn[k]=(conn[k]||0)+1; }
+      });
+      var missingPairs = maxPairs - Object.keys(conn).length;
+      if (missingPairs > 0) {
+        pruefen.push({
+          label: missingPairs + ' Abteilungspaar' + (missingPairs===1?'':'e') + ' ohne FL2-Koordinationsformat',
+          detail: (maxPairs-missingPairs) + ' von ' + maxPairs + ' möglichen Abteilungspaaren sind über ein FL2-Format verbunden. Die fehlenden Paare können Abhängigkeiten nicht strukturiert klären.',
+          tabIdx: 10, tabLabel: 'Flight Levels', basisNote: null
+        });
+      }
+    }
+  }
+
+  // 5) Engpass-Spitzen (Person mit den meisten Meetings + FK-Konzentration Top 10) – wie Engpass-Briefing
+  var distinctCount = {};
+  MEETINGS.forEach(function(m) {
+    var beteiligte = {};
+    if (m.verantwortlich) beteiligte[m.verantwortlich] = true;
+    m.teilnehmer.forEach(function(t){ beteiligte[t] = true; });
+    Object.keys(beteiligte).forEach(function(p){ distinctCount[p] = (distinctCount[p]||0)+1; });
+  });
+  var allPersons = Object.keys(distinctCount).sort(function(a,b){ return distinctCount[b]-distinctCount[a]; });
+  if (allPersons.length) {
+    var top1 = allPersons[0];
+    var top10 = allPersons.slice(0,10);
+    var top10FK = top10.filter(function(p){ return fkSet.has(p); }).length;
+    pruefen.push({
+      label: escapeHtml(top1) + ' stärkst beansprucht (' + distinctCount[top1] + ' Meetings)',
+      detail: 'FK-Anteil unter den Top ' + top10.length + ' meistbeschäftigten Personen: ' + top10FK + '/' + top10.length + '. Ist die Last fair verteilt, könnten Meetings delegiert werden?',
+      tabIdx: 6, tabLabel: 'Engpass', basisNote: null
+    });
+  }
+
+  // 6) Wirkungs-Konflikt: Einschätzung Verantwortliche/r vs. Team weicht > 2 Punkte ab – wie Mein-Input-Badge
+  var konflikte = MEETINGS.filter(function(m){
+    return m.wertVerantwortlich !== null && m.wertTeilnehmerAvg !== null && Math.abs(m.wertVerantwortlich - m.wertTeilnehmerAvg) > 2;
+  });
+  if (konflikte.length) {
+    var qmTeilnehmerWirkung = computeQualityMetrics().filter(function(x){ return x.label === 'Teilnehmer-Wirkung erfasst'; })[0];
+    pruefen.push({
+      label: konflikte.length + ' Wirkungs-Konflikt' + (konflikte.length===1?'':'e') + ' zwischen Verantwortlichen und Team',
+      detail: konflikte.slice(0,3).map(function(m){ return '"' + escapeHtml(m.name) + '"'; }).join(', ') + (konflikte.length>3?' u.a.':'') + ' – Einschätzung zur Wirkung weicht stark ab, Konsens herstellen?',
+      tabIdx: 9, tabLabel: 'Alle Meetings',
+      basisNote: qmTeilnehmerWirkung ? _basisNote(qmTeilnehmerWirkung.count, qmTeilnehmerWirkung.tot, 'der Meetings mit Teilnehmer-Wirkung erfasst (weitere Konflikte ggf. unentdeckt)') : null
+    });
+  }
+
+  // 7) Zusammenlegungs-Kandidaten (Jaccard >= 60%, "hohe Überschneidung") – wie Überschneidungen-Tab
+  var ml = activeMeetings().filter(function(m){ return m.teilnehmer.length >= 2; });
+  var overlapPairs = [];
+  for (var oi=0; oi<ml.length; oi++) {
+    for (var oj=oi+1; oj<ml.length; oj++) {
+      var s1 = new Set(ml[oi].teilnehmer), s2 = new Set(ml[oj].teilnehmer);
+      var inter = [...s1].filter(function(x){ return s2.has(x); });
+      var union = new Set([...s1, ...s2]);
+      var score = union.size ? inter.length/union.size : 0;
+      if (score >= 0.6) overlapPairs.push({ a: ml[oi].name, b: ml[oj].name, score: score });
+    }
+  }
+  if (overlapPairs.length) {
+    overlapPairs.sort(function(a,b){ return b.score - a.score; });
+    var p0 = overlapPairs[0];
+    pruefen.push({
+      label: overlapPairs.length + ' Meeting-Paar' + (overlapPairs.length===1?'':'e') + ' mit hoher Teilnehmer-Überschneidung',
+      detail: 'Stärkstes Paar: "' + escapeHtml(p0.a) + '" &harr; "' + escapeHtml(p0.b) + '" (' + Math.round(p0.score*100) + '% gleiche Teilnehmer). Zusammenlegung prüfen.',
+      tabIdx: 5, tabLabel: 'Überschneidungen', basisNote: null
+    });
+  }
+
+  return { kritisch: kritisch, pruefen: pruefen };
+}
+
+// Datenbasis-Check – Kopf des Befund-Tabs ("weiche Sperre"): Ampel + konkrete
+// Lücken + Absprung in die Konfiguration. Blockiert die Befunde darunter nicht,
+// warnt aber, wenn die Basis dafür (noch) nicht ausreicht.
+function _renderBefundDatenbasis() {
+  var el = document.getElementById("befund-datenbasis");
+  if (!el) return;
+  if (!MEETINGS.length) { el.innerHTML = ''; return; }
+
+  var metrics = computeQualityMetrics();
+  var withPct = metrics.map(function(m){ return { label: m.label, pct: m.tot > 0 ? Math.round(m.count / m.tot * 100) : 100 }; });
+  var schwach = withPct.filter(function(x){ return x.pct < QUALITY_THRESHOLDS.green; });
+  var minPct = Math.min.apply(null, withPct.map(function(x){ return x.pct; }));
+
+  var st, word;
+  if (minPct >= QUALITY_THRESHOLDS.green) { st = { color: COLORS.ok, icon: '✓' }; word = 'Ausreichend'; }
+  else if (minPct >= QUALITY_THRESHOLDS.yellow) { st = { color: COLORS.warn, icon: '⚠' }; word = 'Lückenhaft'; }
+  else { st = { color: COLORS.bad, icon: '✕' }; word = 'Unzureichend'; }
+
+  var reason = schwach.length === 0
+    ? 'Alle ' + metrics.length + ' Qualitätsmerkmale liegen bei mindestens 80% – die Befunde unten stehen auf einer verlässlichen Basis.'
+    : schwach.length + ' von ' + metrics.length + ' Merkmalen unter 80%: ' + schwach.map(function(x){ return escapeHtml(x.label) + ' (' + x.pct + '%)'; }).join(' · ') + '. Befunde unten können dadurch unvollständig oder verzerrt sein – lückenhafte Befunde sind einzeln markiert.';
+  var btn = schwach.length > 0
+    ? '<button class="btn-primary" style="margin-top:10px;padding:6px 16px;font-size:.8rem" onclick="showTab(0)">&rarr; Zur Konfiguration</button>'
+    : '';
+
+  el.innerHTML = '<div class="komm-briefing-card" style="border-left:4px solid ' + st.color + '">'
+    + '<div class="tbr-header"><span class="tbr-title">Datenbasis</span>'
+    + '<span class="tbr-sub">' + MEETINGS.length + ' Meetings geladen</span></div>'
+    + '<div style="padding:6px 0 4px;font-size:.9rem;font-weight:700;color:' + st.color + '">' + st.icon + ' ' + word + '</div>'
+    + '<div style="font-size:.83rem;color:#374151;line-height:1.5">' + reason + '</div>'
+    + btn
+    + '</div>';
+}
+
+// Eine Befund-Karte: Icon + Wort + Begründung (Status-Farben-Konvention), klickbar
+// zum jeweiligen Detail-Tab, optional mit Zuverlässigkeits-Hinweis zur Datenbasis.
+function _befundCard(item, st) {
+  var basisHtml = item.basisNote ? '<div class="fl-q-missing">&#9888; ' + escapeHtml(item.basisNote) + '</div>' : '';
+  return '<div class="fl-question" style="border-left:4px solid ' + st.color + ';cursor:pointer" onclick="showTab(' + item.tabIdx + ')">'
+    + '<div class="fl-q-head">'
+    + '<span class="fl-q-status" style="color:' + st.color + '">' + st.icon + ' ' + st.word + '</span>'
+    + '<span style="font-size:.72rem;color:#9ca3af">' + escapeHtml(item.tabLabel) + ' &rarr;</span>'
+    + '</div>'
+    + '<div class="fl-q-title">' + item.label + '</div>'
+    + '<div class="fl-q-answer">' + item.detail + '</div>'
+    + basisHtml
+    + '</div>';
+}
+
+function renderBefund() {
+  _renderBefundDatenbasis();
+  var el = document.getElementById("befund-content");
+  if (!el) return;
+  if (!MEETINGS.length) { el.innerHTML = ''; return; }
+
+  var b = collectBefunde();
+  var KRITISCH = { color: COLORS.bad,  icon: '⚠', word: 'Kritisch' };
+  var PRUEFEN  = { color: COLORS.warn, icon: '⚠', word: 'Prüfen' };
+
+  function section(title, items, st, emptyText) {
+    var body = items.length
+      ? items.map(function(item){ return _befundCard(item, st); }).join('')
+      : '<div class="fl-question" style="border-left:4px solid ' + COLORS.ok + '">'
+        + '<div class="fl-q-answer" style="color:' + COLORS.ok + ';font-weight:600">&#10003; ' + emptyText + '</div></div>';
+    return '<p class="fl-section-title">' + title + ' (' + items.length + ')</p>' + body;
+  }
+
+  el.innerHTML =
+      section('Kritisch', b.kritisch, KRITISCH, 'Keine kritischen Befunde erkannt.')
+    + section('Prüfen', b.pruefen, PRUEFEN, 'Keine auffälligen Muster erkannt.');
+}
+
 // ── Organigramm ───────────────────────────────────────────────────────────────
 function renderOrganigramm() {
   var elSun = document.getElementById("chart-org-sunburst");
@@ -5021,6 +5263,7 @@ function refreshAllCharts() {
   });
   renderedTabs.delete(10); // Flight Levels neu rendern
   renderedTabs.delete(11); // Organigramm neu rendern
+  renderedTabs.delete(12); // Befund neu rendern
   renderedTabs.delete(0);  // Konfiguration (Personen + Datenpflege) neu rendern
   // Gruppen-Teilnehmer nach Abteilungsänderung neu prüfen
   MEETINGS.forEach(m => {
