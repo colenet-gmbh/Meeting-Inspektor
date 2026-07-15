@@ -488,6 +488,8 @@ textarea#paste-area::placeholder{color:#cbd5e1}
   <div id="panel-3" class="panel" data-tab="2">
     <button class="tab-info-btn" onclick="showTabInfo(2)">ℹ</button>
     <div id="abt-briefing" style="margin-bottom:16px"></div>
+    <p class="fl-section-title">Abteilungs-Scorecard</p>
+    <div id="abt-scorecard" style="margin-bottom:20px"></div>
     <div class="toggle-grp">
       <button id="abt-btn-anzahl" class="active" onclick="setAbtMode('anzahl')">Anzahl</button>
       <button id="abt-btn-freq" onclick="setAbtMode('freq')">Freq./Monat</button>
@@ -685,7 +687,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "15.07.2026 23:38";
+const APP_VERSION = "16.07.2026 00:12";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -2144,6 +2146,7 @@ function renderAbtRolleChart(aktive, yAbts) {
 
 function renderAbteilung() {
   _renderAbteilungsBriefing();
+  _renderAbteilungsScorecard();
   renderAbtChart();
   renderRhythmusChart();
   renderStatusVerteilung();
@@ -3637,6 +3640,108 @@ function _renderAbteilungsBriefing() {
     + '<div class="komm-insight-sub">' + uebergr + ' von ' + aktive.length + ' Meetings verbinden mehrere Abteilungen</div></div>'
     + wirkInsight
     + '</div></div>';
+}
+
+// Abteilungs-Scorecard: pro Abteilung eine Karte mit Zeitlast, Ø-Wirkung, result-neutral-
+// Anteil, FL2-Anbindung und stärkst belasteter Person. Spiegelt dieselben Filter/Schwellen
+// wie collectBefunde()/Flight-Levels/Engpass, nur auf Abteilungsebene aggregiert statt
+// org-weit oder pro Person – keine neue Diagnoselogik.
+function _renderAbteilungsScorecard() {
+  var el = document.getElementById("abt-scorecard");
+  if (!el) return;
+  if (!MEETINGS.length || !allDepts.length) { el.innerHTML = ''; return; }
+
+  var aktive = activeMeetings();
+  var aktiveOhnePlatzhalter = MEETINGS.filter(function(m){ return !m.ist_platzhalter; });
+
+  // FL2-Verbindungen zwischen Hauptabteilungen – wie _renderFLMatrix (Flight Levels F2),
+  // damit die Zahlen zwischen Scorecard und Flight-Levels-Tab übereinstimmen.
+  var mainDepts = allDepts.filter(function(d){ return !SPECIAL_DEPTS.find(function(s){ return s.key===d; }); });
+  var conn = {};
+  aktiveOhnePlatzhalter.filter(function(m){ return m.flugebene === 'FL2'; }).forEach(function(m) {
+    var abtSet = new Set([m.abteilung]);
+    m.teilnehmer.forEach(function(t){ var a = effectivePersonAbt[t]; if (a && mainDepts.includes(a)) abtSet.add(a); });
+    var arr = [...abtSet].filter(function(a){ return mainDepts.includes(a); });
+    for (var i=0;i<arr.length;i++) for (var j=i+1;j<arr.length;j++) {
+      var k = [arr[i],arr[j]].sort().join('||');
+      conn[k] = (conn[k]||0) + 1;
+    }
+  });
+
+  var cards = allDepts.map(function(dept) {
+    var deptMeetings = aktive.filter(function(m){ return m.abteilung === dept; });
+    var deptMeetingsAlle = aktiveOhnePlatzhalter.filter(function(m){ return m.abteilung === dept; });
+
+    // Zeitlast (Personen-Stunden/Monat) – wie Zeitverteilung: Meetings ohne Dauer ausgeklammert
+    var zeitlast = deptMeetings.reduce(function(sum, m) {
+      return sum + (m.dauer !== null ? monthlyHours(m) * (m.teilnehmer.length || 1) : 0);
+    }, 0);
+
+    // Ø-Wirkung – wie _renderAbteilungsBriefing (erst ab 2 bewerteten Meetings aussagekräftig)
+    var wirkVals = deptMeetings.filter(function(m){ return m.wirkungEffektiv !== null && m.wirkungEffektiv !== undefined; }).map(function(m){ return m.wirkungEffektiv; });
+    var avgWirkung = wirkVals.length >= 2 ? round1(wirkVals.reduce(function(a,b){ return a+b; }, 0) / wirkVals.length) : null;
+
+    // Result-neutral: FL2/FL3-Meetings dieser Abteilung mit Wirkung <= 2 – wie Flight Levels F3
+    var resultNeutral = deptMeetingsAlle.filter(function(m){
+      return (m.flugebene === 'FL2' || m.flugebene === 'FL3') && m.wert !== null && m.wert <= 2;
+    }).length;
+
+    // FL2-Anbindung: andere Hauptabteilungen ohne gemeinsames FL2-Format
+    var missingPartners = mainDepts.includes(dept)
+      ? mainDepts.filter(function(other) {
+          if (other === dept) return false;
+          var k = [dept, other].sort().join('||');
+          return !conn[k];
+        })
+      : [];
+
+    // Stärkst belastete Person innerhalb der Abteilungs-Meetings
+    var distinctCount = {};
+    deptMeetings.forEach(function(m) {
+      var beteiligte = {};
+      if (m.verantwortlich) beteiligte[m.verantwortlich] = true;
+      m.teilnehmer.forEach(function(t){ beteiligte[t] = true; });
+      Object.keys(beteiligte).forEach(function(p){ distinctCount[p] = (distinctCount[p]||0) + 1; });
+    });
+    var topPersons = Object.keys(distinctCount).sort(function(a,b){ return distinctCount[b]-distinctCount[a]; });
+    var topPerson = topPersons.length ? topPersons[0] : null;
+
+    // Ampel + Impuls-Satz
+    var impulse = [];
+    var isKritisch = (avgWirkung !== null && avgWirkung < 2.5) || resultNeutral >= 2;
+    var isPruefen = !isKritisch && (missingPartners.length > 0 || resultNeutral === 1 || (avgWirkung !== null && avgWirkung < 3));
+
+    if (avgWirkung !== null && avgWirkung < 3) {
+      impulse.push('Ø-Wirkung ' + avgWirkung + '/4 – Meetings dieser Abteilung hinterfragen?');
+    }
+    if (resultNeutral > 0) {
+      impulse.push(resultNeutral + ' Koordinations-/Strategie-Meeting' + (resultNeutral===1?'':'s') + ' vermutlich result-neutral.');
+    }
+    if (missingPartners.length > 0) {
+      impulse.push(missingPartners.length + ' Abteilung' + (missingPartners.length===1?'':'en') + ' ohne FL2-Anbindung: ' + missingPartners.slice(0,3).map(escapeHtml).join(', ') + (missingPartners.length>3?' u.a.':'') + '.');
+    }
+    if (!impulse.length) {
+      impulse.push('Keine besonderen Auffälligkeiten erkannt.');
+    }
+
+    var st = isKritisch ? STATUS_KRITISCH : (isPruefen ? STATUS_PRUEFEN : { color: COLORS.ok, icon: '✓', word: 'OK' });
+    var farbe = effectiveAbtFarben[dept] || COLORS.neutral;
+    var metricsLine = deptMeetings.length + ' Meeting' + (deptMeetings.length===1?'':'s')
+      + ' · ' + round1(zeitlast) + ' h/Mo'
+      + ' · Ø-Wirkung ' + (avgWirkung !== null ? avgWirkung + '/4' : 'keine Daten')
+      + (topPerson ? ' · stärkste Last: ' + escapeHtml(topPerson) : '');
+
+    return '<div class="fl-question" style="border-left:4px solid ' + st.color + '">'
+      + '<div class="fl-q-head">'
+      + abtBadge(dept, farbe, "sm")
+      + '<span class="fl-q-status" style="color:' + st.color + '">' + st.icon + ' ' + st.word + '</span>'
+      + '</div>'
+      + '<div class="fl-q-answer">' + metricsLine + '</div>'
+      + '<div class="fl-q-answer" style="margin-top:4px">' + impulse.join(' ') + '</div>'
+      + '</div>';
+  }).join('');
+
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">' + cards + '</div>';
 }
 
 function _renderKalenderBriefing() {
