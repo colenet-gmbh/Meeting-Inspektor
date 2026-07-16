@@ -455,6 +455,18 @@ textarea#paste-area::placeholder{color:#cbd5e1}
     <button class="tab-info-btn" onclick="showTabInfo(12)">ℹ</button>
     <div id="befund-datenbasis" style="margin-bottom:16px"></div>
     <div id="befund-content"></div>
+
+    <p class="fl-section-title">Und für dich persönlich?</p>
+    <div class="dp-section" id="sec-mein-input">
+      <p class="dp-section-desc">Trag deinen Namen oder dein Kürzel ein – du siehst deine Organisationssignale und offene Datenpflege-Punkte.</p>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <input type="text" id="mein-name-input" placeholder="Name oder Kürzel (z. B. MB)"
+               style="padding:6px 12px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.87rem;width:260px;outline:none;font-family:inherit"
+               oninput="renderMeinInputSection()">
+      </div>
+      <div id="mein-input-org-signale"></div>
+      <div id="mein-input-result"></div>
+    </div>
   </div>
   <div id="panel-0" class="panel" data-tab="1">
     <button class="tab-info-btn" onclick="showTabInfo(1)">ℹ</button>
@@ -576,7 +588,6 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 
     <div class="dp-topbar">
       <nav class="dp-nav">
-        <a href="#sec-mein-input" class="dp-nav-chip">Mein Input</a>
         <a href="#sec-personen" class="dp-nav-chip">Personen</a>
         <a href="#sec-typen" class="dp-nav-chip">Abteilungstypen</a>
         <a href="#sec-qualitaet" class="dp-nav-chip">Datenqualität</a>
@@ -584,18 +595,6 @@ textarea#paste-area::placeholder{color:#cbd5e1}
         <a href="#sec-export" class="dp-nav-chip">Export / Import</a>
       </nav>
       <div class="dp-health-strip" id="dp-health-strip"></div>
-    </div>
-
-    <div class="dp-section" id="sec-mein-input">
-      <p class="dp-section-title">Dein persönliches Cockpit</p>
-      <p class="dp-section-desc">Trag deinen Namen oder dein Kürzel ein – du siehst deine Organisationssignale und offene Datenpflege-Punkte.</p>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        <input type="text" id="mein-name-input" placeholder="Name oder Kürzel (z. B. MB)"
-               style="padding:6px 12px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.87rem;width:260px;outline:none;font-family:inherit"
-               oninput="renderMeinInputSection()">
-      </div>
-      <div id="mein-input-org-signale"></div>
-      <div id="mein-input-result"></div>
     </div>
 
     <div class="dp-section" id="sec-personen">
@@ -681,7 +680,7 @@ textarea#paste-area::placeholder{color:#cbd5e1}
 // FK_LIST    : Führungskräfte (Stern im Netzwerk); [] = keine Hervorhebung
 // PERSON_SUBTEAM : optionale Subteam-Zuordnung für Hover-Texte
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION = "16.07.2026 00:43";
+const APP_VERSION = "16.07.2026 11:33";
 const ALIAS_MAP = {
   // Beispiel: "max": "Max"
 };
@@ -1473,9 +1472,9 @@ function renderStats() {
 // ══════════════════════════════════════════════════════════════════════════════
 const TAB_INFO = {
   12: { title: "Befund",
-        was: "Bündelt die wichtigsten Diagnosen aus allen Analyse-Tabs (Wirkung, Flight Levels, Engpass, Überschneidungen) in einer priorisierten Liste: kritische Befunde, Punkte zum Prüfen und der Stand der Datenqualität.",
+        was: "Bündelt die wichtigsten Diagnosen aus allen Analyse-Tabs (Wirkung, Flight Levels, Engpass, Überschneidungen) in einer priorisierten Liste: kritische Befunde, Punkte zum Prüfen und der Stand der Datenqualität. Darunter: dein persönliches Cockpit – Name/Kürzel eingeben und deine eigenen Organisationssignale sowie offene Datenpflege-Punkte sehen.",
         achten: "Ein Befund ist nur so verlässlich wie seine Datenbasis. Befunde mit lückenhafter Datenbasis sind entsprechend gekennzeichnet – bei geringer Datenqualität lohnt sich zuerst ein Abstecher in den Tab 'Konfiguration'.",
-        folgefragen: "Welche kritischen Befunde wurden noch nicht angegangen? Reicht die Datenbasis aus, um den Befunden zu vertrauen, oder sollten zuerst Daten nachgepflegt werden?" },
+        folgefragen: "Welche kritischen Befunde wurden noch nicht angegangen? Reicht die Datenbasis aus, um den Befunden zu vertrauen, oder sollten zuerst Daten nachgepflegt werden? Betreffen dich persönlich welche der Signale weiter unten?" },
   0: { title: "Konfiguration",
        was: "Zentrales Setup in Sektionen: Personen-Zuordnung (gelber Punkt = unsichere Zuordnung, ★ = Führungskraft), Abteilungstypen, Gruppen-Teilnehmer, Datenqualität und Export/Import der gesamten Konfiguration.",
        achten: "Prüfe gelb markierte Personen und korrigiere per Klick – alle Analyse-Tabs bauen darauf auf. Abteilungstypen verbessern die Flight-Level-Klassifikation. Export/Import erspart Kollegen das Neu-Setzen.",
@@ -3936,7 +3935,6 @@ const DEPT_TYP_OPTS = [
 ];
 
 function renderDatapflege() {
-  renderMeinInputSection();
   renderDeptTypenGrid();
   renderQualitaetsCockpit();
   renderGruppenTeilnehmerSection();
@@ -5448,6 +5446,7 @@ function _befundCard(item, st) {
 
 function renderBefund() {
   _renderBefundDatenbasis();
+  renderMeinInputSection();
   var el = document.getElementById("befund-content");
   if (!el) return;
   if (!MEETINGS.length) { el.innerHTML = ''; return; }
